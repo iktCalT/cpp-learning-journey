@@ -116,8 +116,8 @@ bool: 0 is false, anything else is true (including negative numbers).  Although 
 
 function `sizeof()` returns how many Bytes a variable occupies.
 
-pointers: `bool* variable`  <!-- TODO: Add reference (pass by pointer (copy)) later -->
-references: `bool& variable`  <!-- TODO: Add reference (pass by reference) later -->
+pointers: `bool* variable` -> [Pointers in C++](#pointers-in-c)
+references: `bool& variable` -> [References in C++](#references-in-c)
 
 ## C++ Header Files
 
@@ -184,7 +184,7 @@ Types are meaningless, they just tell the compiler how many bytes to read from w
 
 If you need a pure pointer and don't want to specify what type it points to, you can use `void*`. For example, we can define a pure pointer as `void* ptr = NULL`, `void* ptr = nullptr`, or `void* ptr = &10` (store 10 in memory and create point to its address).
 
-To create a integer pointer: `int *pi = &8`.
+To define a integer pointer: `int* pi = &8`. If you want to define multiple pointers in one line `int *x, *y, *z;` (mentioned in [![CONST in C++][yt]](https://youtu.be/4fJBrditnJU?t=481)).
 
 `char *buff = new char[8];` allocate 8 bytes in **heap** and let `buff` point to that location on heap.  `memset(ptr, val, size)` (e.g. `memset(buff, 0, 8)`) can initialize (set values for a block of memory).  `delete[] buff` can release the buffer.
 
@@ -247,6 +247,8 @@ pi = &b;
 // it's created. 
 int& ref2 = b;
 ```
+
+The return value can also be passed by reference. Read this [StackOverflow](https://stackoverflow.com/questions/2379859/in-c-what-does-mean-after-a-functions-return-type) page.
 
 ## CLASSES in C++
 
@@ -346,7 +348,7 @@ int main() {
 
 Read [this](https://www.geeksforgeeks.org/cpp/static-keyword-cpp/).
 
-Local: static inside a function means that symbol (**symbol: function / variable / object's name**) is going to be declared only once for the entire lifetime of the program.
+Local: static inside a function means that symbol (**symbol: function / variable / object's name**) is going to be initialized only once for the entire lifetime of the program.
 
 Local: static inside class or struct means that symbol is going to shared by all instances of the class / struct (for a variable, its memory address is shared; for a method, *it should be called using the class name with the scope resolution operator (::). It can access only static data members or member functions*).
 
@@ -887,7 +889,7 @@ Characters: in C++ type `char` can represent one Byte of memory. It can also rep
 
 8 bits is not enough to represent all letters and symbols in English, Japanese, Korean, Chinese, etc... However, in C++ primitive types, `char` can only represent up to 256 characters (although ASCII only uses non-negative 128 numbers of `char`).
 
-As for how to support non-English characters, it won't be covered here. 
+As for how to support non-English characters, it won't be covered here.
 
 ### How string works
 
@@ -901,14 +903,14 @@ Assigning a string: `const char* name = "Cherno";`.
 
 If you don't want to use it anymore, just don't use it. You should NOT delete it—`delete name;` is illegal.  **Remember: if you didn't use `new` keyword, don't use `delete` keyword.**
 
-`const` make sure that the values stored at those addresses CANNOT be changed. `name[2] = 'a'` is illegal if `name` is declared as `const char*`.  And it's not recommended to delete `const`. If you declared a string as `char* name = "Cherno";`, then change it `name[2] = 'a'`, it's an **undefined behavior** (watch next [video](https://youtu.be/FeHZHF0f2dw?t=203)).  Thus, strings are immutable, if you want to change a character, just create a new string. So, strings are always `const char*` (some compilers don't let you compile a `char*` without `const`).
+`const` make sure that the values stored at those addresses CANNOT be changed. `name[2] = 'a'` is illegal if `name` is declared to be `const char*`.  And it's not recommended to delete `const`. If you define a string to be `char* name = "Cherno";`, then change it `name[2] = 'a'`, it's an **undefined behavior** (watch next [video](https://youtu.be/FeHZHF0f2dw?t=203)).  Thus, strings are immutable, if you want to change a character, just create a new string. So, strings are always `const char*` (some compilers don't let you compile a `char*` without `const`).
 
 All strings are end with a `'\0'` (ASCII 0, NUL) character. It's used to indicate where the string ends. So, `sizeof("Cherno")` is 7 (not 6).
 
 These three are equivalent  
 `char* name = "Cherno";`  
 `char name2[7] = { 'C', 'h', 'e', 'r', 'n', 'o', '\0' };`  
-` char name2[7] = { 'C', 'h', 'e', 'r', 'n', 'o', 0 };`
+`char name2[7] = { 'C', 'h', 'e', 'r', 'n', 'o', 0 };`
 
 ### C++-style
 
@@ -973,7 +975,7 @@ If you really want to change it, define it as an **array** `char name[] = "Chern
 
 ### Wide character
 
-We can declare a wide character with `const wchar_t* name2 = L"Cherno";`. `L` means the following string is made of wide character (16 bits on windows, 32 bits on Unix/Linux).
+We can define a wide character with `const wchar_t* name2 = L"Cherno";`. `L` means the following string is made of wide character (16 bits on windows, 32 bits on Unix/Linux).
 
 There are other types of character.
 
@@ -1000,7 +1002,7 @@ const char* example2 = "Line1\n"
 
 ### String literals are always on read-only segment
 
-String literals are always on read-only segment. Even if we created an array of characters and change it. 
+String literals are always on read-only segment. Even if we created an array of characters and change it.
 
 ```c++
 char name[] = "Cherno";
@@ -1011,5 +1013,622 @@ name[2] = 'a';
 
 [![string literals][yt]](https://youtu.be/FeHZHF0f2dw?t=683)
 
-<!-- References -->
+## CONST in C++
+
+`const` don't change the generated program. It only makes our code cleaner and enforces certain rules.  It's a promise that you won't change it.  But of course, you can bypass it and break your promise (but if you really want to change it, just don't declare it a `const`).
+
+You can change a `const` by creating a pointer pointing to it and change the content of that pointer.  But try to **avoid** doing so.
+
+```c++
+int main() {
+  const int MAX_AGE = 90;
+  int* a = new int;
+  a = (int*)(&MAX_AGE);
+  *a = 2;
+  std::cout << *a << std::endl; // 2
+}
+```
+
+`const int` and `int const` are equivalent.
+
+### Constant pointers
+
+#### `const` before `*`
+
+`const int* a` and `int const* a` mean you cannot change the contents of that pointer. But you can change the address it pointing to.  ->  `a` is a pointer pointing to a `const int`, you can regard them as `(const int)* a` and `(int const)* a`.
+
+```c++
+const int MAX_AGE = 90;
+const int* a = new int; 
+    // or int const* a = new int; 
+// *a = 2;                // illegal
+a = (int*)(&MAX_AGE);     // legal
+```
+
+#### `const` after `*`
+
+While `int* const a` means that you cannot change where `a` is pointing to. But you can change its contents.  ->  `a` is a `const` pointer pointing to a fixed address. You can regard it as `(int*) (const a)`
+
+```c++
+const int MAX_AGE = 90;
+int* const a = new int;
+*a = 2;                   // legal
+// a = (int*)(&MAX_AGE);  // illegal
+```
+
+#### Two `const` pointer
+
+`const int* const a`: you cannot change the contents or where it points to.
+
+### Constant methods in classes
+
+In classes, if you write `const` on the right of a method means **this method cannot modify any class members**.
+
+```c++
+class Entity {
+private:
+  int m_X, m_Y;
+public:
+  int GetX() const { // it's a good idea to declare getters to be `const`
+    // m_X = 2; is illegal
+    return m_X;
+  }
+
+  void SetX(int x) { // you should not declare setters to be `const`
+    m_X = x;
+  }
+};
+```
+
+If `m_X` is a pointer, you can even write 3 `const`s in one line.  `int* m_X;` `const int* const GetX() const { return m_X; }`.  It means that this method will return a pointer that whose contents cannot be modified, and itself cannot be modified, too. Moreover, this method cannot modify the class members.
+
+#### Why uses `const` in classes
+
+[![Why uses const in class][yt]](https://youtu.be/4fJBrditnJU?t=512)
+
+```c++
+class Entity {
+private:
+  int m_X;
+public:
+  int GetX() const {
+    return m_X;
+  }
+};
+
+void PrintEntity(const Entity& e) {
+  std::cout << e.GetX() << std::endl;
+}
+```
+
+If I want to create a read-only function outside the class.
+
+- I want to pass by reference, because it saves memory. -> `&e` (or pass the pointer `*e`)
+- I don't want to modify the entity, because it's a read-only function. -> `const Entity& e` (or `const Entity* e`)
+- Because `e` is declared to be `const`, `e.GetX()` can be called only if `GetX()` is declared to be `const` (otherwise, compiler don't know whether `GetX()` will modify `e` or not). -> `int GetX() const`
+
+So, if an instance is declared to be `const` in a function, only the `const` methods of that class can be called.  ->  Always mark your methods as `const` as long as it don't modify class members.
+
+#### Mutable
+
+[![mutable][yt]](https://youtu.be/4fJBrditnJU?t=683)
+
+If you want to mark the method `const` but you really need to modify some variable that don't affect the program much (maybe for debugging), declare that variable `mutable`.
+
+```c++
+class Entity {
+private:
+  int m_X = 0;
+public:
+  mutable int count = 0;
+
+public:
+  int GetX() const {
+    count++;
+    return m_X;
+  }
+};
+
+void PrintEntity(const Entity& e) {
+  std::cout << e.GetX() << std::endl;
+}
+
+int main() {
+  Entity e;
+  PrintEntity(e);
+  PrintEntity(e);
+  std::cout << e.count << std::endl;  // 2
+}
+```
+
+## The Mutable Keyword in C++
+
+Mutable means something can change. When we talk about `mutable` in C++, we usually mean something is kind of `const` but **can** change.
+
+### Mutable with const methods
+
+```c++
+class Entity {
+private:
+  std::string m_Name;
+  mutable int m_DebugCount = 0; // mutable: allow const method modify it
+public:
+  const std::string& GetName() const {
+    m_DebugCount++; // If you have to change a method in a const method, mark it as mutable
+    return m_Name;
+  }
+};
+
+int main() {
+  const Entity e;
+  e.GetName(); // Because e is a const Entity, GetName() can be called only if it's a const method
+}
+```
+
+### Mutable in lambda expression
+
+Lambda is a little throwaway function let you assign a variable quickly.
+
+```c++
+int main() {
+  // Here is a lambda expression
+  int x = 1, y = 5;
+  // Definition
+  auto f = [&x, y]() { // pass x by reference, pass y by value
+    x++;
+    std::cout << x << std::endl;
+    std::cout << x << std::endl;
+  };
+
+  // Call
+  // don't write f(x, y). lambda will find x and y outside its scope automatically
+  f();
+}
+```
+
+Parameters can be passed in these ways:
+
+- `f = [x](){expression}`: pass `x` by value
+- `f = [&x](){expression}`: pass `x` by reference
+- `f = [=](){expression}`: pass everything it receives by value
+- `f = [&](){expression}`: pass everything it receives by reference
+
+However, if you want to pass `x` by value (because you don't want to change its value outside lambda), you cannot use `x++` in lambda expression.
+
+```c++
+// The following expression is Illegal
+auto f = [x]() {
+  x++; 
+  std::cout << x << std::endl;
+}
+```
+
+You can solve it by assigning a new variable `y` equal to `x`, then change `y`.
+
+```c++
+auto f = [x]() {
+  int y = x;
+  y++
+  std::cout << y << std::endl;
+};
+```
+
+However, this method creates a new copy. We have already copied `x`'s value by passing by value.  If we use `mutable` keyword, we can solve this problem without creating more variables.
+
+```c++
+auto f = [x]() mutable {
+  x++
+  std::cout << y << std::endl;
+};
+```
+
+## Member Initializer Lists in C++ (Constructor Initializer List)
+
+There are two ways to initialize class (or struct) members. The first way is by using **constructors**.
+
+```c++
+class Entity {
+private:
+  std::string m_Name;
+
+public:
+  Entity() {
+    m_Name = "Unknown";
+  }
+  Entity(const std::string& name) {
+    m_Name = name;
+  }
+  void Print() {
+    std::cout << m_Name << std::endl;
+  }
+};
+
+int main() {
+  Entity e0;
+  e0.Print(); // Unknown
+  Entity e1("Cherno");
+  e1.Print(); // Cherno
+}
+```
+
+The second way is through **member initializer list**.
+
+```c++
+class Entity {
+private:
+  std::string m_Name;
+  int m_Score;
+
+public:
+  Entity() 
+    : m_Name("Unknown"), m_Score(0) {}
+  Entity(const std::string& name, int score) 
+    : m_Name(name), m_Score(score) {}
+  void Print() {
+    std::cout << m_Name << ": " << m_Score << std::endl;
+  }
+};
+
+int main() {
+  Entity e0;
+  e0.Print(); // Unknown: 0
+  Entity e1("Cherno", 100);
+  e1.Print(); // Cherno: 100
+}
+```
+
+**\[Note\]**: When you are using member initializer list, the order of initialization is based on the order of how you define them.  For example, even if you write constructor in this way `Entity() : m_Score(0), m_Name("Unknown") {}`, `m_Name` will be initialized first. Because it's defined before `m_Score`.  So, to not make yourself confused, **write initializer list in the same order as definition.**
+
+The second way is more recommended. First, it separate initialization and other things constructor should do, so than you can focus more on "other things".
+
+Moreover, the second way is faster. Because in the first way, **member variables (except for primitive types) are constructed twice**—first time with default constructor, allocating space for them; second time giving values to them and discard the previous value.
+
+```c++
+class Example {
+public:
+  Example() {
+    std::cout << "Created Entity" << std::endl;
+  }
+  Example(int x) {
+    std::cout << "Created Entity with " << x << std::endl;
+  }
+};
+
+class Entity {
+private:
+  std::string m_Name;
+  Example m_Example;
+
+public:
+  Entity() { // generate m_Name and m_Example with default constructor
+    m_Name = std::string("Unknown"); // omg, m_Name is given a new value, discard the original one
+    m_Example = Example(8); // omg, m_Example is given a new value, discard the original one
+  }
+};
+
+int main() {
+  Entity e0; 
+    // Created Entity
+    // Created Entity with 8
+}
+```
+
+`m_Example` is constructed twice. If you changed the constructor to `Entity() : m_Name("Unknown"), m_Example(8) {}`, only "Created Entity with 8" will be printed.
+
+## Ternary Operators in C++ (Conditional Assignment)
+
+This section is pretty simple: `<condition> ? <if true> : <if false>`. Please note that in Python, this expression is in different order `<if true> if <condition> else <if false>`. 
+
+> Ternary: of, relating to, or proceeding by threes
+
+You can also nest ternary operators: `rank = level > 5 ? level > 10 ? "Master" : "Intermediate" : "Beginner"`. It can be regarded as `rank = level > 5 ? (level > 10 ? "Master" : "Intermediate") : "Beginner"`. But try **not** to do so.  If you have to write in this way, use the following format.
+
+```c++
+// copied from @jonsnow8543's comment
+rank = level > 10 ?       "Master" :
+       level >  5 ? "Intermediate" :
+                        "Beginner" ;
+```
+
+## How to CREATE/INSTANTIATE OBJECTS in C++
+
+There are two choices of instantiate (creating instances of) classes.  Creating on **stack** or on **heap**.  Note: Even empty class—class without any member—occupies at least one byte.
+
+**Stack** objects' lifespan are controlled by their scope. Once the program goes out of the scope, the objects declared in the scope are destroyed automatically.
+
+**Heap** objects will live forever until the program exits or you destroy them manually.
+
+```c++
+using String = std::string;
+
+class Entity {
+private:
+  String m_Name;
+public:
+  Entity() : m_Name("Unknown") {}
+  Entity(const String& name) : m_Name(name) {}
+
+  const String& GetName() const { return m_Name; }  // it's a const method returning const String& 
+};
+```
+
+Here is a trick: `using String = std::string;` helps you type less.
+
+Notice that the return type of `GetName()` is `String&` (`std::string&`), it returns a **reference**, meaning that the returning variable and the variable in this function share the same **address**. Read this [StackOverflow](https://stackoverflow.com/questions/2379859/in-c-what-does-mean-after-a-functions-return-type) page for more information.
+
+And we can instantiate the class in following ways.
+
+### On stack
+
+```c++
+int main() {
+  // --- Create on stack ---
+  Entity e0; // or Entity e0{};
+  Entity e1("Cherno"); // or Entity e0{"Cherno"};
+  Entity e2 = Entity("Cherno"); // or Entity e2 = Entity{"Cherno"};
+}
+```
+
+#### When create object on stack
+
+Almost all the time, because it is faster, and we don't need to destroy objects manually.  **If you can instantiate on stack, DO instantiate on stack.**
+
+Remember: creating objects on stack are **faster**, and we **don't need to manage them manually**.
+
+#### When don't instantiate on stack
+
+- When you want the object live outside the scope (you want to manage the lifetime of the object manually). [![when to create objects on heap][yt]](https://youtu.be/Ks97R1knQDY?t=296)
+
+  ```c++
+  // If we create on stack
+  int main() {
+    Entity* pe;
+    {
+      Entity e("Cherno");
+      pe = &e;
+    }
+
+    // Other codes
+
+    std::cout << pe->GetName() << std::endl; // Illegal!!!
+  }
+  ```
+
+  The location where `pe` is pointing at is destroyed when the program gets out of the scope. If that location is used, `pe->GetName()` will return the contaminated data.
+
+  Instead, we can create the object on **heap**.
+
+  ```c++
+  // If we create on heap
+  int main() {
+    Entity* pe;
+    {
+      pe = new Entity("Cherno"); // on heap
+    }
+
+    // Other codes
+
+    std::cout << pe->GetName() << std::endl; // Legal!!!
+    delete pe; // destroy the object
+  }
+  ```
+
+- When the stack don't have enough space
+
+  Stacks are usually small (usually several megabytes, depending on your platform and compiler). If we have too many large objects, there will be no enough room on stack to allocate them.
+
+## The NEW Keyword in C++
+
+[![the new keyword in c++][yt]](https://youtu.be/NUZdUSqsCs4)
+
+The keyword `new` allocates memory on the **heap**, and return its **address**.  It's slower than on stack, because it needs to do many steps (for example, find a location with enough space).
+
+Usually (if we don't overload `new`), calling `new` will call `malloc()`.  Although both `new` and `malloc()`  can be used to instantiate objects.  Notice that `new` will call constructors for you, but `malloc()` won't.  Moreover, when no enough space is available, `malloc()` it will return `nullptr`, while `new` will throw a `std::bad_alloc` exception. Read this [StackOverflow](https://stackoverflow.com/questions/3389420/will-new-operator-return-null) page for more information.
+
+\[REMEMBER\]: If you use `new`, you have to use `delete`. Otherwise, more and more spaces are occupied in heap and **memory leak** will occur.
+
+### Deleting a array is different:
+
+```c++
+int* arr = new int[50];
+delete[] arr;  // delete array
+```
+
+### Placement `new`
+
+If you want to specify where to allocate the object:
+
+```c++
+void* p = malloc(sizeof(Entity));
+if (p == nullptr) {
+  throw std::bad_alloc();
+}
+Entity* e = new(p) Entity(); // create Entity at p
+```
+
+## Implicit Conversion and the Explicit Keyword in C++
+
+[![type conversion][yt]](https://youtu.be/Rr1NX1lH3oE)
+
+### Implicit conversion
+
+```c++
+class Entity {
+private:
+  std::string m_Name;
+  int m_Age;
+public:
+  Entity(const std::string& name) 
+    : m_Name(name), m_Age(-1) {}
+  Entity(const int age) 
+    : m_Name("Unknown"), m_Age(age) {}
+};
+
+void PrintEntity(const Entity& entity) {
+  // Printing codes...
+}
+
+int main() {
+  // Normal case
+  Entity a = Entity("Cherno");
+  Entity b = Entity(22);
+  
+  // Implicit conversion
+  Entity c = 22;
+  PrintEntity(22); // PrintEntity(Entity(22))
+  Entity d = std::string("Cherno");
+  PrintEntity(std::string("Cherno")); // PrintEntity(Entity("Cherno"))
+}
+```
+
+You cannot write `Entity c = "Cherno"` or `PrintEntity("Cherno");`, because `"Cherno"` is `const char[]` by default. So it has to go through 2 conversions (`const char[]` to `std::string` to `Entity`) in those codes. However, C++ will only do one implicit conversion for us.
+
+### Explicit keyword
+
+The keyword `explicit` disables implicit conversion.
+
+```c++
+class Entity {
+private:
+  std::string m_Name;
+  int m_Age;
+public:
+  explicit Entity(const int age) 
+    : m_Name("Unknown"), m_Age(age) {}
+};
+
+int main() {
+  // Legal
+  Entity a(22); // Constructor
+  Entity b = Entity(22); // Constructor
+  Entity c = (Entity)22; // explicit conversion
+
+  // Illegal!
+  Entity d = 22; // implicit conversion -> illegal
+}
+```
+
+`explicit` can help you write safe codes, because it prevent unintentional casting. But it's not used so often.
+
+## OPERATORS and OPERATOR OVERLOADING in C++
+
+[![operators in c++][yt]](https://youtu.be/mS9755gF66w)  
+[Operator references](https://en.cppreference.com/cpp/language/operators)
+
+Operators are just functions.  Use operator overloading only in cases make perfect sense.
+
+Here is an example of operator overloading. Some special operators will be covered in other videos.
+
+```c++
+struct Vector2 { // two-component vector
+  float x, y;
+  Vector2(float x, float y)
+    : x(x), y(y) {}
+  void Print() {
+    std::cout << "x: " << x << "  y: " << y << std::endl;
+  }
+
+  Vector2 operator+(const Vector2& other) const {
+    return Vector2(x + other.x, y + other.y);
+  }
+  Vector2 operator*(const Vector2& other) const {
+    return Vector2(x * other.x, y * other.y);
+  }
+
+  Vector2 Add(const Vector2& other) const {
+    return operator+(other);
+  }
+  Vector2 Multiply(const Vector2& other) const {
+    return operator*(other);
+  }
+};
+
+int main() {
+  Vector2 position(4.0f, 4.0f);
+  Vector2 speed(0.5f, 1.5f);
+  Vector2 powerup(1.1f, 1.1f);
+
+  Vector2 result = position + speed * powerup;
+  result.Print(); // x: 4.55  y: 5.65
+  
+  // or
+  Vector2 result2 = position.Add(speed.Multiply(powerup));
+  result2.Print(); // x: 4.55  y: 5.65
+}
+```
+
+### Operator `<<` in `std::cout`
+
+`std::cout` overloaded `<<` operator. So that we can use `std::cout << aString`.
+
+If we want to print a user-defined class on the console. We can overload `<<`.
+
+```c++
+// Definition of Vector2
+std::ostream& operator<<(std::ostream& stream, const Vector2& other) {
+  stream << other.x << ", " << other.y;
+  return stream;
+}
+
+int main() {
+  Vector2 position(4.0f, 4.0f);
+  std::cout << position << std::endl; // 4, 4
+}
+```
+
+### Overloading operator `==` and `!=`
+
+```c++
+struct Vector2 { // two-component vector
+  float x, y;
+  Vector2(float x, float y)
+    : x(x), y(y) {}
+
+  bool operator==(const Vector2& other) const {
+    return x == other.x && y == other.y;
+  }
+  bool operator!=(const Vector2& other) const {
+    return !(*this == other);
+  }
+};
+
+int main() {
+  Vector2 vec0(1.0f, 2.0f);
+  Vector2 vec1(3.0f, 2.0f);
+  Vector2 vec2(1.0f, 2.0f);
+  std::cout << (vec0 == vec1) << std::endl; // 0
+  std::cout << (vec0 == vec2) << std::endl; // 1
+  std::cout << (vec0 != vec2) << std::endl; // 0
+}
+```
+
+Although overloading operators are convenient, they make your code looks wired sometimes, so think carefully before using this technique.
+
+## The "this" keyword in C++
+
+The keyword `this` means a **pointer** pointing the current object.
+
+```c++
+void PrintEntity(const Entity& e)
+
+class Entity {
+public:
+  int x, y;
+  Entity(int x, int y) {
+    this->x = x;
+    this->y = y;
+
+    // "this" also helps you call a outside function
+    PrintEntity(*this);
+  }
+};
+
+void PrintEntity(const Entity& e) {
+  // Print Entity
+}
+```
+
+You can also write `delete this;` in a class. But it's **not** recommended to do so.
+
+<!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

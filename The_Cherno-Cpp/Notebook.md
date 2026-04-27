@@ -1317,7 +1317,7 @@ int main() {
 
 ## Ternary Operators in C++ (Conditional Assignment)
 
-This section is pretty simple: `<condition> ? <if true> : <if false>`. Please note that in Python, this expression is in different order `<if true> if <condition> else <if false>`. 
+This section is pretty simple: `<condition> ? <if true> : <if false>`. Please note that in Python, this expression is in different order `<if true> if <condition> else <if false>`.
 
 > Ternary: of, relating to, or proceeding by threes
 
@@ -1427,7 +1427,7 @@ Usually (if we don't overload `new`), calling `new` will call `malloc()`.  Altho
 
 \[REMEMBER\]: If you use `new`, you have to use `delete`. Otherwise, more and more spaces are occupied in heap and **memory leak** will occur.
 
-### Deleting a array is different:
+### Deleting a array is different
 
 ```c++
 int* arr = new int[50];
@@ -1629,6 +1629,310 @@ void PrintEntity(const Entity& e) {
 ```
 
 You can also write `delete this;` in a class. But it's **not** recommended to do so.
+
+## Object Lifetime in C++ (Stack/Scope Lifetimes)
+
+[![object lifetime][yt]](https://youtu.be/iNuTwvD6ciI)
+
+```c++
+class Entity {
+public:
+  Entity() {
+    std::cout << "Created Entity!" << std::endl;
+  }
+  ~Entity() {
+    std::cout << "Destroyed Entity!" << std::endl;
+  }
+};
+
+int main() {
+  {
+    Entity e; // Created Entity! (on **stack**)
+  } // Destroyed Entity!
+  std::cout << "Exited Scope!" << std::endl; // Exited Scope!
+  
+  {
+    Entity* e = new Entity(); // Created Entity! (on **heap**)
+  }
+  std::cout << "Exited Scope!" << std::endl; // Exited Scope!
+}
+```
+
+Objects on heap won't be destroyed when getting outside the scope.
+
+Because objects on stack will be destroyed when exiting the scope, don't write code like this:
+
+```c++
+int* CreateArray() {
+  int array[50];
+  return array;  // return an address (pointer)
+  // WRONG!!!
+  // array will be destroyed when exiting this function
+}
+```
+
+To solve this problem, you can either allocate it on heap `int* array = new int[50];`. Or create an object outside the function and fill the data in it.
+
+```c++
+void CreateArray(int* array) {
+  // fill the array
+  return;
+}
+
+int main() {
+  int array[50];
+  CreateArray(array)
+}
+```
+
+### Automatically delete a heap object
+
+Use smart pointer (will be covered in the [lecture](#smart-pointers-in-c-stdunique_ptr-stdshared_ptr-stdweak_ptr)). But we'll define a scoped pointer for ourself in this section.
+
+```c++
+class Entity {
+public:
+  Entity() {
+    std::cout << "Created Entity!" << std::endl;
+  }
+  ~Entity() {
+    std::cout << "Destroyed Entity!" << std::endl;
+  }
+};
+
+class ScopedPtr {
+private:
+  Entity* m_Ptr;
+public:
+  ScopedPtr(Entity* ptr)
+    : m_Ptr(ptr) {}
+  ~ScopedPtr() {
+    delete m_Ptr;
+  }
+};
+
+int main() {
+  {
+    ScopedPtr e(new Entity());
+  }
+  std::cout << "Exited Scope!" << std::endl;
+  // Created Entity!
+  // Destroyed Entity!
+  // Exited Scope!
+}
+```
+
+Even though the instance of Entity is created on heap, it's destroyed when getting outside the scope.
+
+With this feature, we can write a timer class to measure how fast your function runs—create a timer object at the beginning of your function, and it will be destroyed when the function ends. Both constructor and destructor record current time, and you can get how long a function runs with this class.
+
+Moreover, you can write automatically destroyed lock to make sure only one thread can access a function.
+
+## SMART POINTERS in C++ (std::unique_ptr, std::shared_ptr, std::weak_ptr)
+
+Smart is essentially a wrapper around a real pointer. When you create a smart pointer, it will call `new` and allocate memory on heap for you. And at some point (based which smart pointer you use), that memory will be freed automatically.
+
+### Auto pointers
+
+Deprecated.
+
+### Unique pointers
+
+A unique pointer is a scoped pointer. When it gets out of the scope, the pointer will be destroyed and the memory allocated for it will be freed.
+
+They are called "unique" pointer because they have to be unique. They cannot be copied, making sure **that memory can be pointed by only one pointer**.  So, when that unique pointer is deleted, that memory can be freed safely.
+
+```c++
+class Entity {
+public:
+  Entity() {
+    std::cout << "Created Entity!" << std::endl;
+  }
+  ~Entity() {
+    std::cout << "Destroyed Entity!" << std::endl;
+  }
+};
+
+int main() {
+  {
+    // You can create unique pointer in this way:
+    // std::unique_ptr<Entity> entity(new Entity());
+    // But the preferred way of creating unique pointer is:
+    std::unique_ptr<Entity> entity = std::make_unique<Entity>(); // output: Created Entity!
+
+    // std::unique_ptr<Entity> e = entity;  // Illegal, unique pointers cannot be copied
+  } // output: Destroyed Entity!
+
+  std::cout << "Exited Scope!" << std::endl; // Exited Scope!
+}
+```
+
+Why `std::unique_ptr<Entity> entity = std::make_unique<Entity>();` is preferred to `std::unique_ptr<Entity> entity(new Entity());`?  Because of *exception safety*—If the object is created successfully, but it failed to create the unique pointer (maybe because insufficient space), the object cannot be deleted anymore and causing memory leak.
+
+`std::unique_ptr<Entity> entity(new Entity());` means you create a Entity on heap and pass its address to the constructor of `std::unique_ptr` to create a unique pointer.
+
+You **cannot** write `std::unique_ptr<Entity> entity = new Entity();` (there's no implicit conversion for the constructor of `std::unique_ptr`), it means you created a unique pointer, and re-assign the address it is pointing to. That's **illegal**.
+
+### Shared pointers
+
+If you want to copy or pass the pointer (by value) to a function. Use shared pointer `std::shared_ptr`.
+
+How shared pointer is implemented depends on the compiler and the standard library you are using with your compiler. But almost all systems use *reference counting*—you count how many references are there to the shared pointer, when the count reaches 0, delete the pointer and free the space.
+
+```c++
+class Entity {
+  // same as above
+};
+
+int main() {
+  std::shared_ptr<Entity> e;
+  {
+    // Same as unique pointer, you can also create a shared pointer in the following way (not recommended)
+    // std::shared_ptr<Entity> sharedEntity(new Entity());
+
+    std::shared_ptr<Entity> sharedEntity = std::make_shared<Entity>(); // output: Created Entity!
+    e = sharedEntity; // You can copy a shared pointer
+  }
+
+  std::cout << "Exited Scope!" << std::endl; // output: Exited Scope!
+} // output: Destroyed Entity!
+```
+
+Objects are destroyed only when all references to that shared pointer are deleted.
+
+`std::shared_ptr<Entity> sharedEntity = std::make_shared<Entity>();` is preferred to `std::shared_ptr<Entity> sharedEntity(new Entity());` not only because of exception safety. But also because shared pointers needs another block of memory called *control block* storing reference count, if we create a object and pass its address to the shared pointer's constructor, there will be two memory allocation (object and control block), which is slower.
+
+### Weak pointers
+
+When you assign a shared pointer to a weak pointer, **it won't increase the reference count**. And when it is destroyed, the **reference count won't decrease**, too.
+
+```c++
+class Entity {
+  // same as above
+};
+
+int main() {
+  std::weak_ptr<Entity> e;
+  {
+    std::shared_ptr<Entity> sharedEntity = std::make_shared<Entity>(); // output: Created Entity!
+    e = sharedEntity;
+  } // output: Destroyed Entity!
+
+  std::cout << "Exited Scope!" << std::endl; // output: Exited Scope!
+}
+```
+
+You can ask if a weak pointer expired.
+
+### When to use smart pointers
+
+All the time. Unless you want to manage the memory by yourself.
+
+Unique pointers vs shared pointers: use **unique pointer** as whenever you can.
+
+### More information
+
+Read [this](https://www.geeksforgeeks.org/cpp/smart-pointers-cpp/) page.
+
+## Copying and Copy Constructors in C++
+
+Sometimes, we want to copy an object because we want to modify it without changing the original copy. But sometimes, we don't want to avoid copying because it's time consuming.  So, it is important to understand when C++ will or will not copy for us. And we need to know how to make copying happen as well as how to avoid copying.
+
+Example: [![example of copy][yt]](https://youtu.be/BvR1Pgzzr38?t=63)
+
+Unlike Python, in C++ when you use assignment (`=`), what the compiler does is **always copying**.  If you don't want to copy the object, then create the object on heap and copy its address.
+
+> Note: in Python, primitive types (int, float, ...) are copied, but non-primitive types (list, dictionary, ...) are referenced.
+
+```c++
+// A old-school way to write a string class
+class String {
+private:
+  char* m_Buffer;
+  unsigned int m_Size;
+public:
+  String(const char* string) {
+    m_Size = strlen(string);
+    m_Buffer = new char[m_Size + 1]; // we need one byte for NUL
+    memcpy(m_Buffer, string, m_Size); // If we use strcpy, a NUL will also be copied -> strcpy(m_Buffer, string);
+    m_Buffer[m_Size] = 0; // NUL: '\0'
+  }
+
+  ~String() {
+    delete[] m_Buffer;
+  }
+
+  char& operator[](unsigned int index) {
+    return m_Buffer[index];
+  }
+
+  friend std::ostream& operator<<(std::ostream& stream, const String& string);
+};
+
+// Definition of Vector2
+std::ostream& operator<<(std::ostream& stream, const String& string) {
+  stream << string.m_Buffer;
+  return stream;
+}
+
+int main() {
+  String string = "Cherno";
+  std::cout << string << std::endl;
+}
+```
+
+If we use `String second = string;`, there will be a problem about memory leak. Because `String second = string;` is a ***shallow copying***, it copies only `m_Size` and `m_Buffer` (pointer), but don't copy the string. So, when it reaches the outside of scope, the destructors of both `string` and `second` will delete the object at the same address, causing the program crash.  Moreover, if we modify `second`, `string` will be modified, too. Because their `m_Buffer`s are pointing at the same address! [![memory leak][yt]](https://youtu.be/BvR1Pgzzr38?t=527)
+
+To solve this problem, we need ***deep copying***. To make it happen, we don't write our own clone function. We can use ***copy constructor***.  A copy constructor is the constructor called when you assign a object from the same class to it.
+
+Even if we don't write any copy constructor, there will be a default one. It will look like:
+
+```c++
+// The **default** copy destructor
+class String {
+private:
+  char* m_Buffer;
+  unsigned int m_Size;
+public:
+  // Constructor
+  String(const String& other)
+    : m_Buffer(other.m_Buffer), m_Size(other.m_Size) {}
+  // Destructor and operator overloading
+};
+```
+
+More exactly, the default copy constructor is `String(const String& other) { memcpy(this, &other, sizeof(String)); }`.
+
+If we want to implement deep copying:
+
+```c++
+// Deep copying
+class String {
+private:
+  char* m_Buffer;
+  unsigned int m_Size;
+public:
+  // Constructor
+  String(const String& other)
+    : m_Size(other.m_Size) {
+    m_Buffer = new char[m_Size + 1];
+    memcpy(m_Buffer, other.m_Buffer, m_Size + 1);
+  }
+  // Destructor and operator overloading
+};
+
+int main() {
+  String string = "Cherno";
+  String second = string;
+  second[2] = 'a';
+  std::cout << string << std::endl; // Cherno
+  std::cout << second << std::endl; // Charno
+}
+```
+
+However, if we want to pass those strings to a function, they're passed by copying (value), meaning every time it is passed to a function, C++ will **create a whole new String object** and pass to the function.  To solve this, we just need to pass by reference `void PrintString(const String& string)` [![print the string][yt]](https://youtu.be/BvR1Pgzzr38?t=973)
+
+Takeaway: **ALWAYS PASS YOUR OBJECT BY CONST REFERENCE**. If you want to modify it, create a copy **inside** the function and modify the copy.
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

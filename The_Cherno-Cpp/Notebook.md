@@ -1883,7 +1883,7 @@ int main() {
 
 If we use `String second = string;`, there will be a problem about memory leak. Because `String second = string;` is a ***shallow copying***, it copies only `m_Size` and `m_Buffer` (pointer), but don't copy the string. So, when it reaches the outside of scope, the destructors of both `string` and `second` will delete the object at the same address, causing the program crash.  Moreover, if we modify `second`, `string` will be modified, too. Because their `m_Buffer`s are pointing at the same address! [![memory leak][yt]](https://youtu.be/BvR1Pgzzr38?t=527)
 
-To solve this problem, we need ***deep copying***. To make it happen, we don't write our own clone function. We can use ***copy constructor***.  A copy constructor is the constructor called when you assign a object from the same class to it.
+To solve this problem, we need ***deep copying***. To make it happen, we don't write our own clone function. We can use ***copy constructor***.  A copy constructor is the constructor called when you assign a object from the same class to it. It's a constructor whose argument is another object in the **same class**.
 
 Even if we don't write any copy constructor, there will be a default one. It will look like:
 
@@ -1932,7 +1932,136 @@ int main() {
 
 However, if we want to pass those strings to a function, they're passed by copying (value), meaning every time it is passed to a function, C++ will **create a whole new String object** and pass to the function.  To solve this, we just need to pass by reference `void PrintString(const String& string)` [![print the string][yt]](https://youtu.be/BvR1Pgzzr38?t=973)
 
-Takeaway: **ALWAYS PASS YOUR OBJECT BY CONST REFERENCE**. If you want to modify it, create a copy **inside** the function and modify the copy.
+Takeaway: **ALWAYS PASS YOUR OBJECT BY (CONST) REFERENCE**. If you want to change the original object, pass by reference. If you want to modify it only inside the function, create a copy **inside** the function and modify the copy.
+
+## The Arrow Operator in C++
+
+If we have a pointer to a object, then `(*ptr).member` can be simplified to `ptr->member`.
+
+That's all.
+
+But if you want, you can overload it.
+
+### Overload an arrow operator
+
+```c++
+class Entity {
+private:
+  int x;
+public:
+  void Print() const { std::cout << "Hello" << std::endl; }
+};
+
+class ScopedPtr {
+private:
+  Entity* m_Obj;
+public:
+  ScopedPtr(Entity* entity) 
+    : m_Obj(entity) {}
+  ~ScopedPtr() { delete m_Obj; }
+};
+
+int main() {
+  ScopedPtr entity = new Entity();
+  entity->Print(); // Illegal
+}
+```
+
+Calling `entity->Print();` is illegal, because ScopedPtr don't have member `Print()`. And `entity` is not a pointer, it is a class with a pointer as its member variable
+
+In this case, we need to overload `->`.
+
+```c++
+class ScopedPtr {
+private:
+  Entity* m_Obj;
+public:
+  ScopedPtr(Entity* entity) 
+    : m_Obj(entity) {}
+  ~ScopedPtr() { delete m_Obj; }
+
+  Entity* operator->() { return m_Obj; }
+  const Entity* operator->() const { return m_Obj; }
+}
+```
+
+### Other usage of arrow operator
+
+We can get the offset of a variable by arrow operator;
+
+```c++
+struct Vector3 {
+  float x, y, z;
+};
+
+int main() {
+  int offsetX = (int)&((Vector3*)0)->x; // 0
+  int offsetY = (int)&((Vector3*)0)->y; // 4
+  int offsetZ = (int)&((Vector3*)0)->z; // 8
+}
+```
+
+Meaning of `(int)&((Vector3*)0)->y`:
+
+- `(Vector3*)0`: Cast address `0x0` to pointer `Vector3*`. We can assume it creates an object (lets's call it `vec`) at location `0x0`, although it doesn't.
+- `vec->y`: Get `vec`'s member variable `y`, which is located at `0x4`.
+- `&vec->y`: Get `y`'s address—`0x4`.
+- `(int)&vec->y`: Cast the address (`float*`) to `int`, which is `4`.
+
+## Dynamic Arrays in C++ (std::vector)
+
+It's very important to get to know some standard libraries in C++.
+
+***Standard template library (STL)*** is essentially a library filled with **containers**.  The word "template" means the elements' data types is decided by us. You can provide the type that this container can handle. For example, `std::vector<T>`, where `T` is a template, it can be `int` or `float` or a user-defined class.
+
+### std::vector
+
+It's a long story why it's called "vector". So, let's skip it.  To understand it better, you can think of it an "array list".  It's essentially a **dynamic array**.
+
+Unlike `std::array`, **`std::vector` can resize**. The implementation is basically, when the space is not enough, it will **create a bigger array and copy everything to it**. Then destroy the original one.
+
+Usually, the allocation mentioned above occurs quite often, so STL isn't super fast. Thus, a lot of companies will create their own container libraries.
+
+```c++
+struct Vertex {
+  float x, y, z;
+};
+
+std::ostream& operator<<(std::ostream& stream, const Vertex& vertex) {
+  stream << vertex.x << ", " << vertex.y << ", " << vertex.z;
+  return stream;
+}
+
+int main() {
+  std::vector<Vertex> vertices;
+  vertices.push_back({1,2,3});
+  vertices.push_back({4,5,6});
+  for (const Vertex& v : vertices)
+    std::cout << v << std::endl;
+
+  vertices.erase()
+  vertices.clear(); // clear the container
+}
+```
+
+FAQ: should I store pointers to heap allocated objects in my vector? Or should I store the objects themselves? -> It depends. It's generally more optimal to store objects rather than pointers. So it's very optimal if you iterate over them. The only problem with storing objects is when it needs to resize, it have to copy many things. [![heap pointer vs stack object][yt]](https://youtu.be/PocJ5jXv8No?t=433)
+
+`for (Vertex v : vertices)` vs `for (const Vertex& v : vertices)`: The first case copies every Vertex in side the scope. However, the second uses reference, making it faster.
+
+### How to read this complicated argument list
+
+![vector.erase() argument list](./static/vector.erase().png)
+[![vector.erase() argument list][yt]](https://youtu.be/PocJ5jXv8No?t=690)
+
+This function takes an ***iterator***. Iterators are some special pointers. If I want to get the iterator pointing to the second element (index is 1): `vertices.begin() + 1`.
+
+### Tips
+
+Pass the STL **by (const) reference** into functions.
+
+## Optimizing the usage of std::vector in C++
+
+
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

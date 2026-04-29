@@ -2061,7 +2061,136 @@ Pass the STL **by (const) reference** into functions.
 
 ## Optimizing the usage of std::vector in C++
 
+This lecture is talking about how to use `std::vector` in a more optimal way. As for optimizing in a more lower-level way, it won't be covered here.
 
+How vector works: As mentioned above, it creates an array and maintain a member variable size to record how many elements are valid, as you pushing back elements, when there is no space any more (when size is about to exceed capacity), it will allocate new memory to store those data. And transfer old data to the new addresses.
+
+Our optimize strategy: avoid copying.
+
+### When and how copying happens
+
+```c++
+struct Vertex {
+  float x, y, z;
+
+  Vertex(float x, float y, float z)
+    : x(x), y(y), z(z) {}
+  Vertex(const Vertex& vertex)
+    : x(vertex.x), y(vertex.y), z(vertex.z) {
+      std::cout << "Copied!" << std::endl;
+    }
+};
+
+std::ostream& operator<<(std::ostream& stream, const Vertex& vertex) {
+  stream << vertex.x << ", " << vertex.y << ", " << vertex.z;
+  return stream;
+}
+
+int main() {
+  std::vector<Vertex> vertices;
+  vertices.push_back(Vertex{1,2,3});
+  vertices.push_back(Vertex{4,5,6});
+  vertices.push_back(Vertex{7,8,9});
+} // output: Copied! * 6
+```
+
+Although we pushed back 3 objects, but copy constructor was called 6 times! Why?
+
+Firstly, the objects of Vertex are created in `main` function's stack frame, and they have to be copied to where the vector `vertices` is.
+
+Secondly, when the second element came, there's no enough space, so the first and second elements are moved to new space. When the third element came, all elements are copied to a new space. Thus, 6 copying occurred.
+
+**So, we have two things to optimize: 1. create the object in the vector directly (`emplace_back()`). 2. avoid reallocation (`reserve()`).**
+
+```c++
+// Optimized
+int main() {
+  std::vector<Vertex> vertices;
+  vertices.reserve(3);
+  vertices.emplace_back(1,2,3);
+  vertices.emplace_back(4,5,6);
+  vertices.emplace_back(7,8,9);
+}
+```
+
+Be careful, the argument list of `emplace_back` is the argument list of `Vertex`'s constructor, rather than a `Vertex`'s object.  `vertices.emplace_back(1,2,3)` rather than `vertices.emplace_back({1,2,3})`.
+
+## Local Static in C++
+
+We have introduced 2 meanings of `static` [previously](#static-in-c). This lecture will talk another usage of `static`.
+
+When we declare a variable, we need to think of its **lifetime** and **scope**. Lifetime refers to how long a variable lives. Scope refers to where we can access this variable. Local static variables can live outside the scope. They will be destroyed at the end of the program.
+
+Local static (for example, static in function) have little difference between static in class. Their lifetimes are same (the whole program)/.   But their scopes have some difference, static in class can be access by all instances of that class (and can be accessed even the class has no instance), static in function can be access only by itself.
+
+Example 1:
+
+```c++
+void Function() {
+  static int i = 0;
+  i++;
+  std::cout << i << std::endl;
+}
+
+int main() {
+  Function(); // 1
+  Function(); // 2
+  Function(); // 3
+}
+```
+
+Example 2:
+
+```c++
+static int i = 0;
+
+void Function() {
+  i++;
+  std::cout << i << std::endl;
+}
+
+int main() {
+  Function(); // 1
+  i = 10;
+  Function(); // 11
+  Function(); // 12
+}
+```
+
+Example 3: singleton class—a class that should have only one instance.
+
+```c++
+// A complex implementation of Singleton
+class Singleton {
+private:
+  static Singleton* s_Instance;
+public:
+  static Singleton& Get() { return *s_Instance; }
+  void Hello() { std::cout << "Hello!" << std::endl; }
+};
+
+Singleton* Singleton::s_Instance = nullptr; // default
+
+int main() {
+  Singleton::Get().Hello();
+}
+```
+
+```c++
+// A simpler implementation of Singleton
+class Singleton {
+public:
+  static Singleton& Get() {
+    static Singleton instance; // Only create instance once
+    return instance; 
+  }
+  void Hello() { std::cout << "Hello!" << std::endl; }
+};
+
+int main() {
+  Singleton::Get().Hello();
+}
+```
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

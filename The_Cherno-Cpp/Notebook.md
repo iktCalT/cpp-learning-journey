@@ -2192,5 +2192,119 @@ int main() {
 }
 ```
 
+## Using Libraries in C++ (Static Linking)
+
+Cherno: I don't like package managers, he prefer to include all dependencies in repositories.  Compiling libraries' source code or linking libraries' binary? Recommend compiling the source code. If you cannot get source code or it's not important, you can link the binary.
+
+This lecture is about **linking the binary**.
+
+Link a GLFW library. [![Link GLFW][yt]](https://youtu.be/or1dAmUO8k0?t=230)
+
+There are two kinds directories: include and library. Include directory has a bunch of header files letting us use functions in pre-built binaries. The lib directory has those pre-built binaries.
+
+There are *static libraries* and *dynamic libraries*. Static linking means that the library is put into your executable files. While dynamic linking means the they are linked at runtime. And one dynamic linked library can be shared by multiple processes.
+
+Cherno prefer static linking. Because it can be faster, the linker can perform link-time optimization.
+
+[![how to link a library][yt]](https://youtu.be/or1dAmUO8k0?t=500)
+
+```bash
+HelloWorld
+├── Debug
+│   ├── HelloWorld.exe
+│   └── ...
+├── Dependencies
+│   └── GLFW
+│       ├── include
+│       │   └── GLFW
+│       │       ├── glfw3.h
+│       │       └── glfw3native.h
+│       └── lib-vc2015
+│           ├── glfw3.dll
+│           ├── glfw3.lib
+│           └── glfw3dll.lib
+├── HelloWorld
+│   └── ...
+└── HelloWorld.sln
+```
+
+Include folder: header files, tells us the functions available, and function declarations.
+
+Library folder: provide functions' definition.
+
+- Dynamic Linking: `glfw3.dll` is the dynamic link library, `glfw3dll.lib` the static library to help us use dll in an easier way.
+
+- Static Linking: `glfw3.lib` is the static library.
+
+In Visual Studio (the following can also be done with CMake and makefile):
+
+- Set "C/C++ - General - Additional Include Directories" to "$(SolutionDir)Dependencies\GLFW\include".
+- Set "Linker - General - Additional Library Directories" to "${Solution}Dependencies\GLFW\lib-vc2015". And add "glfw3.lib" to "Linker - Input - Additional Dependencies".
+
+```c++
+#include <iostream>
+#include "GLFW/glfw3.h" // we have to set "Additional Include Directories" first to include.
+
+int main() {
+  int a = glfwInit(); // we have to include definition (set "Additional Library Directories") first.
+  std::cout << a << std::endl; // 1
+}
+```
+
+Since `#include "GLFW/glfw3.h"` is just including the header file with declaration.  We can create declaration by ourselves.
+
+Include quotes ("") vs angular brackets (<>). Since quotes will check relative paths then environment paths. So in many cases, they can be interchangeable.  But the convention is that if the library is internal (included in your solution directory), use quotes (""). If it's an external library, use angular brackets (<>).
+
+```c++
+#include <iostream>
+
+extern "C" int glfwInit();
+
+int main() {
+  int a = glfwInit(); // we have to include definition (set "Additional Library Directories") first.
+  std::cout << a << std::endl; // 1
+}
+```
+
+use `extern "C"` to tell compiler that the "glfw3" library is written in C.
+
+## Using Dynamic Libraries in C++
+
+Dynamic linking happens at runtime. There are two forms of dynamic linking. One is more "static", the program is aware which libraries are required. So, when you launch the program, and if your PC doesn't have that `.dll` file, it will pop out error message. The other one is more "dynamic", the executable look for and load the `.dll` dynamically at runtime.
+
+- Change the "glfw3.lib" in the last lecture to "glfw3ddl.lib" in "Linker - Input - Additional Dependencies".
+- Then, place "glfw3.dll" where executable exists.
+
+```c++
+#include <iostream>
+#include "GLFW/glfw3.h"
+
+int main() {
+  int a = glfwInit();
+  std::cout << a << std::endl; // 1
+}
+```
+
+```bash
+HelloWorld
+├── Debug
+│   ├── HelloWorld.exe # executable
+│   ├── glfw3.dll # place dll here!
+│   └── ...
+├── Dependencies
+│   └── GLFW
+│       ├── include
+│       │   └── GLFW
+│       │       ├── glfw3.h
+│       │       └── glfw3native.h
+│       └── lib-vc2015
+│           ├── glfw3.dll
+│           ├── glfw3.lib
+│           └── glfw3dll.lib
+├── HelloWorld
+│   └── ...
+└── HelloWorld.sln
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

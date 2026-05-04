@@ -1,5 +1,9 @@
 CSCS-Advanced_Cpp
 
+# CMake
+build
+.cache
+
 # VS Code
 .vscode
 

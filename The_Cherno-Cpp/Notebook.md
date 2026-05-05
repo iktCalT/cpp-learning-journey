@@ -2680,5 +2680,87 @@ In macros, you can use backslash(\\) to concatenate multiple lines (backslash is
 MAIN
 ```
 
+## The "auto" keyword in C++
+
+```c++
+int main() {
+  auto a = 5; // a is int. because 5 is int by default
+  auto b = a; // b is int
+  auto c = 5.0f; // c is float
+}
+```
+
+### Advantage of using auto
+
+```c++
+std::string GetName() {
+  return "Cherno";
+}
+
+int main() {
+  auto name = GetName();
+}
+```
+
+If we change the return type of `GetName()` from `std::string` to `char*`, we don't need to change the main function.
+
+### Disadvantage of using auto
+
+If we used properties of `std::string`, for example `int a = name.size()`, there will be error. It might generate some error which is hard to notice.
+
+### When to use auto
+
+Never use auto for types like `int`, `float`, `std::string`, etc.. Only use auto for temporary variables with long typename in as small scope. For example:
+
+```c++
+std::vector<std::string> strings{"Apple", "Orange"};
+
+for (auto it = strings.begin(); it != strings.end(); it++) {
+  std::cout << *it << std::endl;
+}
+```
+
+Here, it is `std::vector<std::string>::iterator`, it's pretty long, and we only use it in this small scope, so we can replace it with `auto`.
+
+```c++
+class Device {};
+class DeviceManager {
+private:
+  std::unordered_map<std::string, std::vector<Device*>> m_Devices;
+public:
+  std::unordered_map<std::string, std::vector<Device*>>& GetDevices() const { return m_Devices; }
+};
+
+int main() {
+  DeviceManager dm;
+
+  // This is long and hard to read
+  const std::unordered_map<std::string, std::vector<Device*>>& devices = dm.GetDevices();
+
+  // Or you can use "using" keyword
+  using DeviceMap = std::unordered_map<std::string, std::vector<Device*>>;
+  const DeviceMap& devices = dm.GetDevices();
+
+  // Or, use typedef
+  typedef std::unordered_map<std::string, std::vector<Device*>> DeviceMap;
+  const DeviceMap& devices = dm.GetDevices();
+
+  // Or, just use auto
+  const auto& devices = dm.GetDevices();
+}
+```
+
+Please note that if you don't want to copy the variable, use `auto&`. Returning by reference doesn't mean storing it by reference. [![auto reference][yt]](https://youtu.be/2vOPEuiGXVo?t=805)
+
+### Tips for auto
+
+In newer version of C++, you can write in a way similar to Python.
+
+```c++
+auto GetName() -> char* {
+  return "Cherno";
+}
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

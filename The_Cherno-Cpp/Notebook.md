@@ -2762,5 +2762,41 @@ auto GetName() -> char* {
 }
 ```
 
+## Static Arrays in C++ (std::array)
+
+`std::array`s are static, you cannot change its size.
+
+```c++
+template <size_t N>
+void PrintArray(const std::array<int, N>& data) {
+  for (int d : data) {
+    std::cout << d << std::endl;
+  }
+}
+
+int main() {
+  std::array<int, 5> data;
+  data[0] = 0;
+  data[1] = 1;
+  PrintArray<data.size()>(data);
+}
+```
+
+`std::array`s are stored **on stack**. While `std::vector`s are store both on stack (object) and heap (data). Moreover, it has boundary checking optionally, meaning that you can perform boundary checking in debug mode to fix errors, and skip boundary checking in release mode to make thr program faster (see the following image).  So, `std::array` is both safe and very fast.
+
+Here is how `std::array` overwrites operator `[]` (please note that this is the definition of MSVC, gcc implement `std::array` in different way):
+
+![boundary checking](./static/static-array-boundary-checking.png)
+
+### When to use std::array
+
+Everywhere you can use a traditional array. You can replace all traditional arrays with standard array.
+
+### Notes for static array
+
+Copied from @khatharrmalkavian3306's comment.
+
+*It's worth noting that the size() function is also constexpr, so it doesn't actually return 5, but rather the compiler will just replace the function call itself with 5, so something like:* `int s = ary.size();` *literally becomes* `int s = 5;` *with no function call at runtime.*
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

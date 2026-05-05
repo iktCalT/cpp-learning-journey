@@ -2055,7 +2055,7 @@ FAQ: should I store pointers to heap allocated objects in my vector? Or should I
 
 This function takes an ***iterator***. Iterators are some special pointers. If I want to get the iterator pointing to the second element (index is 1): `vertices.begin() + 1`.
 
-### Tips
+### Tips for Dynamic Array
 
 Pass the STL **by (const) reference** into functions.
 
@@ -2343,6 +2343,7 @@ project(MyProject)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Add projects into solution
 add_subdirectory(Engine)
 add_subdirectory(Game)
 ```
@@ -2350,10 +2351,13 @@ add_subdirectory(Game)
 #### Directory `Engine`
 
 ```cmake
+# Generate Engine.lib
+# Keywords: static-STATIC; dynamic-SHARED
 add_library(Engine STATIC
     src/Engine.cpp
 )
 
+# Folder of header files, make it PUBLIC
 target_include_directories(Engine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -2379,10 +2383,12 @@ void Hello() {
 #### Directory `Game`
 
 ```cmake
+# Generate executable file
 add_executable(Game
     src/main.cpp
 )
 
+# Make Game link Engine
 target_link_libraries(Game PRIVATE Engine)
 ```
 
@@ -2400,6 +2406,279 @@ int main() {
 At root directory: `cmake -B build` (generate build files in `build/`) + `cmake --build build` (build based on files in `build/`).
 
 Then, find the executable file in `build/Game/Game`.
+
+## How to Deal with Multiple Return Values in C++
+
+### Create a struct
+
+You can create a struct and return this struct. Cherno prefer this way. Read [this](#use-struct) section.
+
+### Pass the variables you want to modify by reference, and return void
+
+This is one of the most optimal way. Because we don't perform copying. Moreover, if you want to modify one variable in certain cases, you can pass `nullptr` as argument.
+
+Or you can pass the pointer, then you can assign it to `nullptr` if something goes wrong in the function.
+
+### Return an array / vector
+
+NOT recommended. The drawback of this method is that you have to create the array on heap, which is not easy to manage. And it can only return variables of same type.
+
+Array (including `std::array` and simple array) is stored on stack, while `std::vector` is stored both on stack (object, including pointer, size, ...) and heap (elements). So, array is faster than vector.
+
+### Use tuple and pair
+
+```c++
+#include <tuple>
+
+static std::tuple<std::string, std::string> ParseShader(const std::string& filepath) {
+  // function body
+  std::string vs = "This is vs parsed from " + filepath;
+  std::string fs = "This is fs parsed from '" + filepath + "'.";
+  return std::make_pair(vs, fs);
+}
+
+int main() {
+  auto sources = ParseShader("res/shaders/Basic.shader");
+  auto vs = std::get<0>(sources);
+  auto fs = std::get<1>(sources);
+  std::cout << vs << std::endl;
+  std::cout << fs << std::endl;
+}
+```
+
+`std::pair` is `std::tuple` with only 2 elements. It's also easier to read results from pair than tuple.
+
+Tuple: `std::get<index>(tuple_name)`
+Pair: `pair_name.first` or `pair_name.second`
+
+#### New feature from C++17
+
+(copied from comment by  @alguienmasraro915)
+
+*For anyone reading recently, there's a better way with structured binding since **c++17**:*
+
+```c++
+// Return a tuple of your choice and return it as per the video:
+std::tuple<std::string, std::string, int> getData() {
+  return { "One", "two", 3 };
+}
+
+// Retrieve values using structured binding:
+int main() {
+  auto [str1, str2, number] = getData();
+}
+```
+
+### Use struct
+
+RECOMMENDED. You don't need to remember with one is the first, which one is the second.
+
+```c++
+struct ShaderProgramSource {
+  std::string VertexSource;
+  std::string FragmentSource;
+};
+
+static ShaderProgramSource ParseShader(const std::string& filepath) {
+  // function body
+  std::string vs = "This is vs parsed from " + filepath;
+  std::string fs = "This is fs parsed from '" + filepath + "'.";
+  return { vs, fs };
+}
+
+int main() {
+  auto sources = ParseShader("res/shaders/Basic.shader");
+  auto vs = sources.VertexSource;
+  auto fs = sources.FragmentSource;
+  std::cout << vs << std::endl;
+  std::cout << fs << std::endl;
+}
+```
+
+## Templates in C++
+
+Template makes the compiler write code for you based on certain rules.
+
+Templates in C++ are much more POWERFUL than generics in other languages. It is a huge topic that will be introduced in dozens of videos. So far (2026), this is the only one video.
+
+*"By no means is this going to be the only video I make on templates"*  
+— The Cherno 2017
+
+### Without template
+
+```c++
+// Overload multiple times
+void Print(int value) {
+  std::cout << value << std::endl;
+}
+void Print(float value) {
+  std::cout << value << std::endl;
+}
+void Print(std::string value) {
+  std::cout << value << std::endl;
+}
+```
+
+### With template
+
+```c++
+template<typename T>
+void Print(T value) {
+  std::cout << value << std::endl;
+}
+```
+
+This is not actual code. It is only when it is called. So, during compile time, when the compiler noticed that the `main()` function called `Print()`: `int i = 0; Print(i)`, it will know that `T` is `int` in this case, then it will generate a real source code `void Print(int value) { std::cout << value << std::endl; }`, then compile it.
+
+We can specify template explicitly: for example, `Print<int>(5)` (equivalent to `Print(5)`), it tells the compiler explicitly that `T` is `int`.
+
+\[Note 1\]: you can also write `template<class T>`, it is equivalent to `template<typename T>`. But `typename` is more readable.  But if `T` is not a typename, but an integer, use `template<int T>`.
+
+\[Note 2\]: template is not a real code, if there's something goes wrong with the template function, but it's not called. Some compiler won't know it (e.g. MSVC, but clang can warn you). The compiler will know the problem only when it is called elsewhere.
+
+### Template class
+
+Templates are not limited to functions, you can create an entire class with template. For example, standard template library (STL) is composed of classes with template.
+
+```c++
+template<typename T, int N>
+class Array {
+private:
+  T m_Array[N];
+public:
+  int GetSize() const { return N; }
+};
+
+int main() {
+  Array<int, 5> array; // T is int, N is 5
+  std::cout << array.GetSize() << std::endl;
+}
+```
+
+### When to use it and when not
+
+It's helpful, because the compiler will write code automatically for you. But don't go too far, if your template is too complex, it's hard to control it.
+
+Cherno usually use templates in logging system and material system (for rendering graphics).
+
+### Note
+
+(Copied from @sigmareaver680's comment)
+
+*For all the novices out there, I think there's one important thing he overlooked regarding using templates. With templates, you must either write AND use them inside a SINGLE source (cpp) file, OR you must write them ENTIRELY inside a header file. Unlike a regular function or class, you can NOT declare them inside a header file and then define them inside a source file. The linker won't be able to link the templates if you do.*
+
+## Stack vs Heap Memory in C++
+
+Stack has pre-defined size, typically 2MB or so. Heap also has pre-defined size, however, it can grow. Both of them are in memory.
+
+Memory allocation strategies for stack and heap are different.
+
+```c++
+struct Vector3 {
+  float x, y, z;
+}
+
+int main() {
+  { // %rsp = x
+    // Stack allocation
+    int value = 5;
+    int array[5];
+    Vector3 vector; // %rsp = x - n
+  } // %rsp = x (memory freed)
+
+  // Heap allocation
+  int* hvalue; // h means heap
+  *hvalue = 5;
+  int* harray = new int[5];
+  Vector* hvector = new Vector3();
+
+  delete hvalue;
+  delete[] harray;
+  delete hvector;
+}
+```
+
+### Allocation: the big difference between stack and heap
+
+In stack, data are stored next to the previous one. And to allocate memory for stack, we just need to move the stack pointer (`%rsp`). That's why **stack allocation is very fast**. Some times, variable can be allocated on register, without storing it on memory.
+
+In heap, data are randomly placed. Creating smart pointers `make_unique()` will use `new`. Keyword `new` will call function `malloc()`. It will check the **free list** to find a suitable free block, mark the block "used", then return a pointer to that block to you. **So, heap allocation is much slower than stack allocation. Remember, `malloc()` is a heavy function!**
+
+### Cache miss: a negligible difference
+
+You may also say that placing variables together increases spacial locality and reduces cache misses. So, stack allocation is better. That's true, but several cache misses is not a big deal. So, in real world, for most of times, you don't need to care too much about cache misses.
+
+### When allocate on stack or heap
+
+On stack: whenever possible.  
+On heap: if you need it to live longer or it's too large to be holden by stack.
+
+## Macros in C++
+
+Use preprocessor to "macro-fy" certain operation. It let preprocessor do some **text** work automatically for us. Please note that it only does pure text replacing. Don't write macros too often and don't write complex macros.
+
+Statements start with hash (#) is known as preprocessor directive.
+
+```c++
+#define WAIT std::cin.get()
+
+int main() {
+  WAIT;
+}
+```
+
+Note: don't write code in this way. You should write `std::cin.get();` in main function. Because macro may be defined in other files, and others may spend time figuring out what `WAIT` means.
+
+Here are some meaningful usage of macros:
+
+```c++
+#include <iostream>
+
+#ifdef PR_DEBUG 
+#define LOG(x) std::cout << x << std::endl; // If we defined PR_DEBUG, LOG(x) means print out to console
+#else
+#define LOG(x) // If PR_DEBUG is not defined, LOG(x) is nothing.
+#endif
+
+int main() {
+  LOG("Hello");
+}
+```
+
+`#ifdef X`: if X is defined, do the following things.  `#ifndef X`: if X haven't been defined, do the following things.
+
+### How define PR_DEBUG
+
+1. In `CMakeLists.txt`, add `target_compile_definitions(Macro PRIVATE $<$<CONFIG:Debug>:PR_DEBUG>)`. This means that if we build in "Debug" mode, then define "PR_DEBUG".
+2. Launch Debug mode:
+
+    Method 1: command line
+
+    ```bash
+    # debug mode
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+    cmake --build build
+    ```
+
+    Method 2: set default mode to debug
+
+    ```cmake
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE Debug)
+    endif()
+    ```
+
+### Tips for macros
+
+In macros, you can use backslash(\\) to concatenate multiple lines (backslash is an escape symbol, it makes newline symbol meaningless).
+
+```c++
+#define MAIN int main() {\
+  std::cin.get();\
+}
+
+MAIN
+```
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

@@ -2798,5 +2798,54 @@ Copied from @khatharrmalkavian3306's comment.
 
 *It's worth noting that the size() function is also constexpr, so it doesn't actually return 5, but rather the compiler will just replace the function call itself with 5, so something like:* `int s = ary.size();` *literally becomes* `int s = 5;` *with no function call at runtime.*
 
+## Function Pointers in C++
+
+Function pointer is a way to assign function to a variable.
+
+```c++
+void HelloWorld(int a) {
+  std::cout << "Hello World! Value: " << a << std::endl;
+}
+
+int main() {
+  // use auto
+  auto hello = HelloWorld;
+  hello(1);
+
+  // auto above is actually "void(*)()"
+  void(*hello2)(int) = HelloWorld;
+  hello2(2);
+
+  // use typedef
+  typedef void(*HelloFunction)(int);
+  HelloFunction hello3 = HelloWorld;
+  hello3(3);
+}
+```
+
+### When to use function pointer
+
+```c++
+void PrintValue(int value) {
+  std::cout << "Value: " << value << std::endl;
+}
+
+void PrintOpposite(int value) {
+  std::cout << "Opposite: " << -value << std::endl;
+}
+
+void ForEach(const std::vector<int>& values, void(*func)(int)) {
+  for (int value : values)
+    func(value);
+}
+
+int main() {
+  std::vector<int> values = {1,2,3,4,5};
+  ForEach(values, PrintValue);
+  ForEach(values, PrintOpposite);
+  ForEach(values, [](int value){ std::cout << "Lambda: " << value << std::endl; });
+}
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

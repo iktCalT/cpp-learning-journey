@@ -2847,5 +2847,50 @@ int main() {
 }
 ```
 
+## Lambdas in C++
+
+Lambda is a way to define an anonymous function. Lambda is essentially a function pointer. Read [document of lambda](https://en.cppreference.com/cpp/language/lambda) for more information.
+
+```c++
+int main() {
+  auto lambda = [](int value) { std::cout << "Value: " << value << std::endl; };
+}
+```
+
+### Capture external variables
+
+`=`: pass by value; `&`: pass by reference; `this`: pass current object by reference.  [![capture][yt]](https://youtu.be/mWgmBBz0y8c?t=262)
+
+```c++
+#include <functional>
+
+void ForEach(const std::vector<int>& values, std::function<void(int)>) {
+  for (int value : values)
+    func(value);
+}
+
+int main() {
+  std::vector<int> values = {1,2,3,4,5};
+
+  int a = 7;
+
+  ForEach(values, [=](int value){ std::cout << "Value: " << a << std::endl; });
+}
+```
+
+To pass the lambda with capture into a function, we cannot use raw function pointer (e.g. `void(*func)(int)`), we have to use `std::function` in library `functional` (e.g. `std::function<void(int)>`).
+
+Lambda is const expression by default. If you want to modify external variables, declare it to be `mutable` (e.g. `[=](int value) mutable { a = 10 };`).
+
+### Lambda + std::find
+
+```c++
+int main() {
+  std::vector<int> values{1,3,5,2,6};
+  auto it = std::find_if(values.begin(), values.end(), [](int value) { return value > 3; }); // find the first element larger than 3
+  std::cout << *it << std::endl; // 5
+}
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

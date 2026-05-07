@@ -2892,5 +2892,47 @@ int main() {
 }
 ```
 
+## Why I don't "using namespace std"
+
+For namespaces that defined by yourself, and it is very long, you can `using namespace usr_defined_namespace;` in small scopes. But it's not good to write `using namespace` (especially `std`). Because
+
+### It is confusing
+
+It's hard to tell if this function in std or it's a user defined function. For example, `std::vector` and `eastl::vector`, if someone put a `using namespace std;` on the top of this file, and put a `using namespace eastl;` elsewhere, then there will be compilation error.
+
+### It is even more confusing in the following case
+
+```c++
+namespace apple {
+  void print(const std::string& text) {
+    std::cout << text << std::endl;
+  }
+}
+namespace orange {
+  void print(const char* text) {
+    std::string temp = text;
+    std::reverse(temp.begin(), temp.end());
+    std::cout << temp << std::endl;
+  }
+}
+
+using namespace apple;
+using namespace orange;
+
+int main() {
+  print("Hello!"); // !olleH
+}
+```
+
+It prints "!olleH", but is not because `using namespace orange;` is placed after `using namespace apple;`. If you swap these two lines, the result is still "!olleH". Because the argument `"Hello!"` is `char *` by default, so it uses the function in namespace `orange`.
+
+### Important nodes for using namespace
+
+**Never ever using namespace in a header file.**
+
+Try not to use `using namespace`, so that others know what you are using, and it prevents possible errors.
+
+If you have to use it, use it in a very **small** scope.
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

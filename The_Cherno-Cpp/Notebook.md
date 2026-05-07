@@ -887,7 +887,7 @@ Characters: in C++ type `char` can represent one Byte of memory. It can also rep
 > UTF: Unicode Transformation Format
 > UTF-16 and UTF-32 are fixed length, they use 16 and 32 bits respectively. UTF-8 is variable length.
 
-8 bits is not enough to represent all letters and symbols in English, Japanese, Korean, Chinese, etc... However, in C++ primitive types, `char` can only represent up to 256 characters (although ASCII only uses non-negative 128 numbers of `char`).
+8 bits is not enough to represent all letters and symbols in English, Japanese, Korean, Chinese, etc. However, in C++ primitive types, `char` can only represent up to 256 characters (although ASCII only uses non-negative 128 numbers of `char`).
 
 As for how to support non-English characters, it won't be covered here.
 
@@ -2710,7 +2710,7 @@ If we used properties of `std::string`, for example `int a = name.size()`, there
 
 ### When to use auto
 
-Never use auto for types like `int`, `float`, `std::string`, etc.. Only use auto for temporary variables with long typename in as small scope. For example:
+Never use auto for types like `int`, `float`, `std::string`, etc. Only use auto for temporary variables with long typename in as small scope. For example:
 
 ```c++
 std::vector<std::string> strings{"Apple", "Orange"};
@@ -2933,6 +2933,50 @@ It prints "!olleH", but is not because `using namespace orange;` is placed after
 Try not to use `using namespace`, so that others know what you are using, and it prevents possible errors.
 
 If you have to use it, use it in a very **small** scope.
+
+## Namespaces in C++
+
+Because C doesn't support namespace, in C, function names are prefixed with its "namespace" to **avoid naming conflicts**. For example, the `apple::print()` and `orange::print()` functions (mentioned in [last section](#it-is-even-more-confusing-in-the-following-case)), are usually written to be `apple_print()` and `orange_print()` in C.
+
+In C++, we can **avoid naming conflicts** by namespaces.
+
+You can have multiple namespace nesting together.
+
+```c++
+namespace apple {
+  namespace functions {
+    void hello() { std::cout << "Hello!" << std::endl; }
+  }
+}
+
+int main() {
+  // apple::hello(); // Illegal
+  // functions::hello(); // Illegal
+  apple::functions::hello();
+
+  // or
+  using apple::functions::hello; // not hello()
+  hello();
+}
+```
+
+### Syntaxes of namespaces
+
+- `using namespace apple;`: use namespace "apple"
+- `using apple::hello;`: use function "hello()" from namespace "apple"
+- `namespace a = apple;`: "a" is the alias of namespace "apple"
+
+For nested namespaces:
+
+- `using namespace apple::functions;`  
+  Or `using namespace apple;` + `using namespace functions;`
+- `using apple::functions::hello;`
+- `namespace a = apple::functions;`
+
+\[Note\]
+
+1. "Symbol" means classes, functions, variables, etc.
+2. *The `::` is called the scope resolution operator.* (copied from @katlehokomeke's comment)
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

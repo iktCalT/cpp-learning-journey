@@ -3012,5 +3012,72 @@ int main() { // main thread
 }
 ```
 
+## Timing in C++
+
+You can use some platform-specific libraries (e.g. win32 api) to get accurate result. But in most cases, `std::chrono` is enough.
+
+```c++
+#include <chrono>
+#include <iostream>
+#include <thread>
+
+int main() {
+  auto start = std::chrono::high_resolution_clock::now();
+
+  // some code
+  using namespace std::literals::chrono_literals;
+  std::this_thread::sleep_for(1s);
+
+  auto end = std::chrono::high_resolution_clock::now();
+
+  std::chrono::duration<float> duration = end - start;
+  std::cout << duration.count() << "s" << std::endl;
+}
+```
+
+You can do it with simpler codes.
+
+```c++
+#include <chrono>
+#include <iostream>
+
+struct Timer {
+  std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+  std::chrono::duration<float> duration;
+
+  // constructor
+  Timer() {
+    start = std::chrono::high_resolution_clock::now();
+  }
+
+  // destructor
+  ~Timer() {
+    end = std::chrono::high_resolution_clock::now();
+    duration = end - start;
+
+    float ms = duration.count() * 1000.0f;
+    std::cout << "Timer took " << ms << "ms" << std::endl;
+  }
+};
+
+void Function() {
+  Timer timer;
+
+  for(int i = 0; i < 100; i++) {
+    std::cout << "Hello" << std::endl;
+  }
+}
+
+int main() {
+  Function();
+}
+```
+
+`std::endl` is very slow, if you change it to `"\n"`, it would be much faster (on godblot, the previous one took 0.36857ms, while the latter one took 0.024833ms).
+
+According to @q_rsqrt5140's comment, *`std::endl` is slow beacuse for each line it must flush buffer*.
+
+There are also many profiling tools. Read missing semester's [Lecture 4](https://missing.csail.mit.edu/2026/debugging-profiling/).
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

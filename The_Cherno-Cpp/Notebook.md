@@ -3197,5 +3197,86 @@ std::sort(values.begin(), values.end(), [](int a, int b) {
 });
 ```
 
+## Type Punning in C++
+
+```c++
+int main() {
+  int a = 50; // in memory: 32 00 00 00
+  double value = a; // in memory: 00 00 00 00 00 00 49 40
+  std::cout << value << std::endl; // 50
+}
+```
+
+In general cases, C++ will convert an `int` into a `double` automatically for you. What if you don't want conversion, you just want to treat the bits of `int` as a `double`?
+
+### Type punning method 1
+
+```c++
+int main() {
+  int a = 50; 
+  double value = (double*)&a;
+}
+```
+
+Notice than **type punning is dangerous**, because:  
+
+- a: 32 00 00 00 (after a is 4 random bytes)
+- value: 32 00 00 00 + the 4 random bytes after a
+
+If the two types are of different size, you may encounter unexpected things. So, only use this method only you **must** use.
+
+### Type punning method 2 - NOT recommended
+
+Use the same address: `double& value = *(double*)&a`. Not recommended, because when you modify `value`, you will modify `a`, too. And because `value` and `a` are different types, you may **modify a in an unexpected way**.
+
+### Example - treat struct as array
+
+```c++
+struct Entity {
+  int x, y;
+};
+
+int main() {
+  Entity e = { 5, 8 };
+  int* position = (int*)&e; // now you can treat e as an integer array.
+  std::cout << position[0] << ", " << position[1] << std::endl; // 5, 8
+
+  // you can also do:
+  int y = *(int*)((char*)&e + sizeof(int));
+  std::cout << y << std::endl; // 8
+}
+```
+
+This is useful in this situation:
+
+For example, if you want to pass the object as an argument, but that argument must be an array. Instead of writing a method that returns an array (it's slow), you can pass the object directly, you just need to say: treat this object as an array.
+
+```c++
+struct Entity {
+  int x, y;
+  // Instead of using the following definition
+  // int* GetPositions() {
+  //   int* a = new int[2];
+  //   a[0] = x;
+  //   a[1] = y;
+  //   return a;
+  // }
+
+  // Use this definition
+  int* GetPositions() {
+    return &x;
+  }
+};
+
+void function(int* position) {
+  std::cout << position[0] << ", " << position[1] << std::endl;
+}
+
+int main() {
+  Entity e{1,2};
+  function(e.GetPositions());
+}
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

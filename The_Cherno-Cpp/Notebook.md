@@ -3079,5 +3079,84 @@ According to @q_rsqrt5140's comment, *`std::endl` is slow beacuse for each line 
 
 There are also many profiling tools. Read missing semester's [Lecture 4](https://missing.csail.mit.edu/2026/debugging-profiling/).
 
+## Multidimensional Arrays in C++(2D arrays)
+
+A 2D array is a 1D array of a 1D array.
+
+### Multidimensional array on stack
+
+It is very easy to create a multidimensional array on stack.
+
+```c++
+int main() {
+  // 5*4 2D array on stack
+  int a2d[5][4];
+  // 5*4*3 3D array on stack
+  int a3d[5][4][3];
+}
+```
+
+### Multidimensional array on heap
+
+But creating a multidimensional array on heap is harder
+
+#### Method 1 - NOT recommended
+
+Store pointer of lower dimensional array to higher dimensional array.
+
+```c++
+int main() {
+  // 5*4 2D array on heap
+  int** a2d = new int*[5]; // an array of 5 pointers to integer (each pointer is pointing to the beginning of an array)
+  for (int i = 0; i < 5; i++) {
+    a2d[i] = new int[4];
+  }
+
+  // 5*4*3 3D array on heap
+  int*** a3d = new int**[5];
+  for (int i = 0; i < 5; i++) {
+    a3d[i] = new int*[4];
+    for (int j = 0; j < 4; j++) {
+      a3d[i][j] = new int[3];
+    }
+  }
+  a3d[0][0][0] = 0;
+}
+```
+
+Delete a 2D array:
+
+```c++
+int main() {
+  // Define a m*n 2D array
+  for (int i = 0; i < m; i++) {
+    delete[] a2d[i];
+  }
+  delete[] a2d;
+}
+```
+
+This method will occupy more space if the size of array is small, because it needs to store extra pointers. And it is slower to access those elements, because it need to jump around different addresses.
+
+Moreover, it causes **memory fragmentation**—instead of storing all elements in a row, they are stored in random places. So that we **cannot** make use of **spacial locality** in iteration.
+
+REMEMBER: storing multidimensional array in this way is **much much slower** than storing them in a row.
+
+#### Method 2 - Recommended
+
+Storing all elements in a row.
+
+```c++
+int main() {
+  // a 5*4 array on heap
+  int* a2d = new int[5 * 4];
+  // assign array[1][2] to 0
+  a2d[1*5 + 2] = 0;
+
+  // deleting it is also simpler
+  delete[] a2d;
+}
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

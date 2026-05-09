@@ -3158,5 +3158,44 @@ int main() {
 }
 ```
 
+## Sorting in C++
+
+`std::sort` can sort for you. It just needs a beginning iterator and an end iterator to sort for you. Of course, you can give more arguments to it.
+
+Complexity: O(N·log(N)).
+
+```c++
+int main() {
+  std::vector<int> values = {3,5,1,4,2};
+  // sort in descending order
+  std::sort(values.begin(), values.end(), std::greater<int>());
+}
+```
+
+### Compare function
+
+The default compare function is "operator<" (`std::less<T>()`), so it is sorted by ascending order (`values[i] < values[i+1]`).  You can pass any function which **receives 2 argument and returns a boolean, and `compare(x,y) = !compare(y,x)`** as the compare function.
+
+You can use the following compare functions
+
+1. default compare function
+2. standard library compare function object
+3. custom function object
+4. lambda expression
+
+Usage examples: see [cppreference.com](https://en.cppreference.com/cpp/algorithm/sort)
+
+```c++
+std::vector<int> values = {3,5,1,4,2};
+// lambda expression, sort in descending order, but place 1 at the end of vector
+std::sort(values.begin(), values.end(), [](int a, int b) {
+  if (a == 1) 
+    return false; // for any value, (1 < value) is false
+  if (b == 1)
+    return true; // for any value, (value < 1) is true
+  return a < b; 
+});
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

@@ -2453,7 +2453,7 @@ Pair: `pair_name.first` or `pair_name.second`
 
 #### New feature from C++17
 
-(copied from comment by  @alguienmasraro915)
+(copied from @alguienmasraro915's comment)
 
 *For anyone reading recently, there's a better way with structured binding since **c++17**:*
 
@@ -3199,6 +3199,10 @@ std::sort(values.begin(), values.end(), [](int a, int b) {
 
 ## Type Punning in C++
 
+Pun (n.): *the usually humorous use of a word in such a way as to suggest two or more of its meanings or the meaning of another word similar in sound*  
+Pun (v.): *to make puns*  
+– Merriam-Webster
+
 ```c++
 int main() {
   int a = 50; // in memory: 32 00 00 00
@@ -3228,6 +3232,10 @@ If the two types are of different size, you may encounter unexpected things. So,
 ### Type punning method 2 - NOT recommended
 
 Use the same address: `double& value = *(double*)&a`. Not recommended, because when you modify `value`, you will modify `a`, too. And because `value` and `a` are different types, you may **modify a in an unexpected way**.
+
+### Type punning method 3 - Recommended
+
+Use union. Read section [Unions in C++](#unions-in-c).
 
 ### Example - treat struct as array
 
@@ -3275,6 +3283,75 @@ void function(int* position) {
 int main() {
   Entity e{1,2};
   function(e.GetPositions());
+}
+```
+
+## Unions in C++
+
+A union is able to hold multiple types, but it can only choose one to hold.
+
+People usually us unions for type punning. They are more readable, and more importantly, if you want to explain an int in double, you won't include random bits. For example: if you want to interpret int 2 as double
+
+Not use union:  
+int: 02 00 00 00 12 34 56 78, where 12 34 56 78 are random bits  
+double: explain 02 00 00 00 12 34 56 78
+
+Use union  
+int: 02 00 00 00 00 00 00 00, extra bits of union are set to 0  
+double: explain 02 00 00 00 00 00 00 00
+
+But be careful: in some compilers, if you don't use `{}` when you are initializing the union, bits might be random.
+
+```c++
+struct Union {
+  union {
+    float a;
+    int b;
+  };  // 8 bytes
+};
+
+int main() {
+  Union u{};
+  u.a = 2;
+  // or Union u{2};
+  std::cout << u.b << std::endl; //1073741824, the explain 02 00 00 00 00 00 00 00 in double
+
+  Union u; // not use {}
+  u.a = 2;
+  std::cout << u.b << std::endl; // in some compiler, it will explain 02 00 00 00 + random bits
+}
+```
+
+How to make use of unions.
+
+```c++
+struct Vector2 {
+  float x, y;
+};
+
+struct Vector4 {
+  // Vector 2 can be represented to be either 4 floats, or 2 Vector2s
+  union {
+    struct {
+      float x, y, z, w;
+    };
+    struct {
+      Vector2 a, b;
+    };
+  };
+};
+
+void PrintVector2(const Vector2& vector) {
+  std::cout << vector.x << ", " << vector.y << std::endl;
+}
+
+int main() {
+  Vector4 vector{ 1.0f, 2.0f, 3.0f, 4.0f };
+  PrintVector2(vector.a); // 1, 2
+  PrintVector2(vector.b); // 3, 4
+  vector.z = 500.0f;
+  PrintVector2(vector.a); // 1, 2
+  PrintVector2(vector.b); // 3, 500
 }
 ```
 

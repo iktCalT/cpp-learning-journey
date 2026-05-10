@@ -3355,5 +3355,77 @@ int main() {
 }
 ```
 
+## Virtual Destructors in C++
+
+If you have a class B inherited form class A, and you passed a class B's object b into a function, which receives A as argument. When you delete this object in this function, you hope that class B's destructor (not only A's) is called, you can use **virtual destructor** to make it happen.
+
+```c++
+class Base {
+public:
+  Base() { std::cout << "Base Constructor" << std::endl; }
+  ~Base() { std::cout << "Base Destructor" << std::endl; }
+};
+
+class Derived : public Base {
+private:
+  int* m_Array;
+public:
+  Derived() { m_Array = new int[5]; std::cout << "Derived Constructor" << std::endl; }
+  ~Derived() { delete[] m_Array; std::cout << "Derived Destructor" << std::endl; }
+}; // If destructor is not called, there will be memory leak
+
+int main() {
+  Base* base = new Base();  // Base Constructor
+  delete base;  // Base Destructor
+  std::cout << "---------------" << std::endl;
+
+  // Expected case, both Base's and Derived constructors and destructors are called
+  Derived* derived = new Derived(); // Base Constructor\nDerived Constructor
+  delete derived; // Derived Destructor\nBase Destructor
+  std::cout << "---------------" << std::endl;
+
+  // Constructor: as expected; Destructor: only Base's is called - not desired
+  Base* poly = new Derived(); // Base Constructor\nDerived Constructor
+  delete poly; // Base Destructor
+}
+```
+
+Both constructors are called correctly, because in `new Derived()`, it's treated as derived class. It's assigned to a Base class pointer after that.
+
+If we treat a derived class object as a base class object, and delete it. The compiler only know it's a base class object, it doesn't know the destructor is overridden. So the derived class's destructor will not be called. To fix this problem, we can use **virtual destructor**. When you mark a method as `virtual`, you are telling C++ that this method might be overridden, please check it.
+
+This is all we need: `virtual ~Base() { std::cout << "Base Destructor" << std::endl; }`
+
+It even works for multiple derived classes:
+
+```c++
+class Base {
+public:
+  Base() { std::cout << "Base Constructor" << std::endl; }
+  virtual ~Base() { std::cout << "Base Destructor" << std::endl; }
+};
+
+class Derived : public Base {
+public:
+  Derived() { std::cout << "Derived Constructor" << std::endl; }
+  ~Derived() { std::cout << "Derived Destructor" << std::endl; }
+};
+
+class Derived2 : public Derived {
+public:
+  Derived2() { std::cout << "Derived 2 Constructor" << std::endl; }
+  ~Derived2() { std::cout << "Derived 2 Destructor" << std::endl; }
+};
+
+int main() {
+  Base* poly2 = new Derived2();
+  delete poly2; // 3 destructors are called
+  Derived* poly = new Derived2();
+  delete poly; // 3 destructors are called
+}
+```
+
+Take away: ***if your class may have any subclass, be 200% to declare its destructor `virtual`.***
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

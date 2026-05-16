@@ -2059,6 +2059,13 @@ This function takes an ***iterator***. Iterators are some special pointers. If I
 
 Pass the STL **by (const) reference** into functions.
 
+Be careful: 
+
+- `std::vector<int>(10, 20)` -> create a vector with 10 elements, all elements are 20. **`()` calls constructor.**
+- `std::vector<int>{10, 20}` -> create a vector with 2 elements, which are 10 and 20 respectively. **`{}` matches `initializer_list` first, if couldn't match any, calls constructor.**
+
+So, remember that: for all classes, if you want to pass data, use `{}`, if you want to pass arguments, use `()`. If you want to initialize a empty object use `std::vector<int> v` or `std::vector<int> v{}`.
+
 ## Optimizing the usage of std::vector in C++
 
 This lecture is talking about how to use `std::vector` in a more optimal way. As for optimizing in a more lower-level way, it won't be covered here.
@@ -3355,6 +3362,10 @@ int main() {
 }
 ```
 
+### Notes: type punning and reinterpret cast
+
+Almost everything you do with type punning can be achieved with reinterpret cast. So, use [reinterpret cast](#c-style-cast-1).
+
 ## Virtual Destructors in C++
 
 If you have a class B inherited form class A, and you passed a class B's object b into a function, which receives A as argument. When you delete this object in this function, you hope that class B's destructor (not only A's) is called, you can use **virtual destructor** to make it happen.
@@ -3426,6 +3437,109 @@ int main() {
 ```
 
 Take away: ***if your class may have any subclass, be 200% to declare its destructor `virtual`.***
+
+## Casting in C++
+
+This topic needs practice.
+
+### Implicit cast
+
+```c++
+int main() {
+  int a = 5
+  double value = a;
+}
+```
+
+This is implicit casting, we don't need to cast `a` into double explicitly before assignment (`double value = (double) a`).
+
+### C-style cast
+
+```c++
+int main() {
+  double value = 5.25;
+  double a = (int)value + 5.3; // 10.3
+  double b = (int)(value + 5.3); // 10
+}
+```
+
+### C++-style cast
+
+There are 4 C++-style cast operators:
+
+- static cast `static_cast <new_type> (exp);`: the most commonly used one.
+- dynamic cast `dynamic_cast <new_type> (exp);`: *is mainly used to perform downcasting (converting a pointer/reference of a base class to a derived class) in polymorphisms and inheritance*.
+- const cast `const_cast <new_type> (exp);`: *is used to modify the const or volatile qualifier of a variable*.
+- reinterpret cast `reinterpret_cast <new_type> (exp);`: *is used to convert the pointer to any other type of pointer*. It re-interpret a memory address (type punning).
+
+They cannot do anything that C-style cast cannot do. They are just syntax sugars, making our life easier. They perform checking, which makes your program safer. And you can search for them in source code!
+
+For more information, read this [geeksforgeeks](https://www.geeksforgeeks.org/cpp/casting-operators-in-cpp/) page.
+
+For instance, static_cast and reinterpret_cast
+
+```c++
+class Base {
+public: 
+  Base() {}
+  virtual ~Base() {}
+}
+
+int main() {
+  double value = 5.25;
+  double s = static_cast<int>(value) + 5.3; // 10.3
+
+  // C++-style cast operators will do validation for us
+  static_cast<Base*>(&value); // Error!
+  reinterpret_cast<Base*>(&value); // No error
+}
+```
+
+Example of dynamic_class:
+
+```c++
+class Base {
+public: 
+  Base() {}
+  virtual ~Base() {}
+};
+
+class Derived : public Base {
+public:
+  Derived() {};
+  ~Derived() {};
+};
+
+class AnotherClass : public Base {
+public:
+  AnotherClass() {};
+  ~AnotherClass() {};
+};
+
+int main() {
+  Derived* derived = new Derived();
+  AnotherClass derived2 = new AnotherClass();
+  Base* base = derived;
+
+  // A lot of code here
+
+  // Now, assume that we forget base is a instance of Derived or AnotherClass
+  // We can use the following method to verify
+
+  AnotherClass* ac = dynamic_cast<AnotherClass*>(base);
+  if (!ac) { // if dynamic_cast fails, it will return nullptr
+    std::cout << "Not a instance of AnotherClass" << std::endl;
+  } else {
+    std::cout << "A instance of AnotherClass" << std::endl;
+  }
+}
+```
+
+- Output: "Not a instance of AnotherClass".  
+- If we change `Base* base = derived;` t0 `Base* base = derived2;`, the output will be "A instance of AnotherClass".  
+- If `Base* base = new Base();`, "Not a instance of AnotherClass".
+
+Cherno use C-style cast for most of time. However, he encourage us to use C++-style cast in new projects. Because they really make our code more solid and is better for cooperators.
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

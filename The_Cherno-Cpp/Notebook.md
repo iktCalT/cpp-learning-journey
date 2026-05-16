@@ -3541,5 +3541,9 @@ int main() {
 
 Cherno use C-style cast for most of time. However, he encourage us to use C++-style cast in new projects. Because they really make our code more solid and is better for cooperators.
 
+## Conditional and Action Breakpoints in C++
+
+Watch demo in Cherno's video. [![Conditional and Action Breakpoints][yt]](https://youtu.be/9ncNA6Co2Nk)
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

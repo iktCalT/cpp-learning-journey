@@ -176,7 +176,7 @@ Video: [![Control Flow][yt]](https://youtu.be/a3IZ8WaIFAA)
 
 ## POINTERS in C++
 
-This video is talking about raw pointers but smart pointers.  Smart pointers will be talked about in the future.
+This video is talking about raw pointers but smart pointers.  [Smart pointers](#smart-pointers-in-c-stdunique_ptr-stdshared_ptr-stdweak_ptr) will be talked about in the future.
 
 A pointer is an integer storing an memory address.
 
@@ -2059,7 +2059,7 @@ This function takes an ***iterator***. Iterators are some special pointers. If I
 
 Pass the STL **by (const) reference** into functions.
 
-Be careful: 
+Be careful:
 
 - `std::vector<int>(10, 20)` -> create a vector with 10 elements, all elements are 20. **`()` calls constructor.**
 - `std::vector<int>{10, 20}` -> create a vector with 2 elements, which are 10 and 20 respectively. **`{}` matches `initializer_list` first, if couldn't match any, calls constructor.**
@@ -3082,7 +3082,7 @@ int main() {
 
 `std::endl` is very slow, if you change it to `"\n"`, it would be much faster (on godblot, the previous one took 0.36857ms, while the latter one took 0.024833ms).
 
-According to @q_rsqrt5140's comment, *`std::endl` is slow beacuse for each line it must flush buffer*.
+According to @q_rsqrt5140's comment, *`std::endl` is slow because for each line it must flush buffer*.
 
 There are also many profiling tools. Read missing semester's [Lecture 4](https://missing.csail.mit.edu/2026/debugging-profiling/).
 
@@ -3544,6 +3544,18 @@ Cherno use C-style cast for most of time. However, he encourage us to use C++-st
 ## Conditional and Action Breakpoints in C++
 
 Watch demo in Cherno's video. [![Conditional and Action Breakpoints][yt]](https://youtu.be/9ncNA6Co2Nk)
+
+## Safety in modern C++ and how to teach it
+
+This video is about should people use smart pointers everywhere or can use raw pointers some times. -> We should not interfere others' choices. Everyone should have the right to write code freely.
+
+What is does word "safe" mean in C++? It relates to **crashes, memory leak, access violations**. There many aspects of C++ safety, including **exceptions, error checking, pointers**. This section will only talk about pointers.
+
+Potential problems of using raw pointers: memory leak, ownership problem [![ownership problem][yt]](https://youtu.be/CWglkNBUmD4?t=317).
+
+Smart pointers are more favorable than raw pointers. It only do one thing for us: `delete` the object. Automating this line is very important for us.
+
+It's okay not use smart pointers provided by standard library, **you can create your own smart pointers**. But, **you should 100% use smart pointers in your production code!** It's also okay to use raw pointers when you are testing something in a small sandbox.
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

@@ -3557,5 +3557,82 @@ Smart pointers are more favorable than raw pointers. It only do one thing for us
 
 It's okay not use smart pointers provided by standard library, **you can create your own smart pointers**. But, **you should 100% use smart pointers in your production code!** It's also okay to use raw pointers when you are testing something in a small sandbox.
 
+## Precompiled Headers in C++
+
+A precompiled header (PCH) is a header file composed of many header files and is already complied into binary. They are vital for large projects.
+
+*They give you an opportunity to grab a bunch of header files, and convert them into a kind of compiled format. Then compiler can use them directly, instead of reading them over and over again.*
+
+For example, C++'s standard library is precompiled, so they don't need to be recompiled every time you use them or every time you modify the some code. **With PCHs, the compilation time will be much much more shorter.**
+
+**However, don't place source code that will change frequently in your PCH, otherwise, every time you change it, the PCH have to be recompiled.** Place those files that are used frequently but not likely to change in your PCH. Often, libraries written by others are placed in PCH (e.g. standard library, Windows API).
+
+**And don't put everything you need into your PCH, otherwise, it will be hard to read.** For example, the GLFW library, it may only be used in one `.cpp` file, so, just `#include <glfw3>` in that cpp file, rather than place it in your PCH. What you should place in your PCH are things like STL, it is used everywhere.
+
+### How to use a PCH
+
+Use `#pragma once`. [![precompiled header demo][yt]](https://youtu.be/eSI4wctZUto)
+
+```c++
+// main.cpp
+#include "pch.h"  // You can give it any name, but it must be **the first include**
+
+int main() {
+  std::cout << "Hello World!" << std::endl;
+}
+```
+
+```c++
+// pch.cpp
+#include "pch.h"
+```
+
+```c++
+// pch.h
+#pragma once
+
+#include <iostream>
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <thread>
+#include <utility>
+
+// Data structures
+#include <string>
+#include <stack>
+#include <deque>
+#include <array>
+#include <vector>
+#include <set>
+#include <map>
+#include <unordered_set>
+#include <unordered_map>
+
+// Windows API
+// #include <Windows.h>
+```
+
+```cmake
+# CMakeLists.txt
+cmake_minimum_required(VERSION 3.16)
+
+project(MyProject LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+add_executable(MyProject
+    src/main.cpp
+    src/pch.cpp
+)
+
+# only use pch for C++ files
+target_precompile_headers(MyProject PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h>"
+) 
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

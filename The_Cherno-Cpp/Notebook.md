@@ -897,7 +897,7 @@ A string is an **array** of characters.
 
 So, `'A'` is a `char`. `"A"` is a char pointer (string).
 
-### C-style
+### C-style string
 
 Assigning a string: `const char* name = "Cherno";`.  
 
@@ -912,7 +912,7 @@ These three are equivalent
 `char name2[7] = { 'C', 'h', 'e', 'r', 'n', 'o', '\0' };`  
 `char name2[7] = { 'C', 'h', 'e', 'r', 'n', 'o', 0 };`
 
-### C++-style
+### C++-style string
 
 C++ standard library has a class called `std::string`. It's essentially a array of `char` (more specifically, `const char*`, same as above).  But there are a bunch of methods related to it.
 
@@ -3633,6 +3633,80 @@ target_precompile_headers(MyProject PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h>"
 ) 
 ```
+
+## Dynamic Casting in C++
+
+It's a [C++ style cast](#c-style-cast-1). For example, if we have 1 parent class (`Entity`) and 2 child classes (`Player` and `Enemy`). It's easy to cast a `Player`'s instance to `Entity`, just use the implicit casting. However, if we have a `Entity` class's instance, we don't know if it can be casted to a `Player`, we can **use `dynamic_cast` to validate**. If it can be casted successfully, it will cast and return its address; otherwise, it will return `nullptr`.
+
+```c++
+class Entity {
+  virtual void PrintName() {} // making it polymorphic
+};
+
+class Player : public Entity {
+};
+
+class Enemy : public Entity {
+};
+
+int main() {
+  Player* player = new Player(); // use smart pointer in production code
+
+  // player is associate with 2 classes: Entity and Player
+  // So, we can cast it to any of these classes easily (implicit cast)
+  Entity* e = player;
+
+  // However, e cannot be casted to Player with implicit cast
+  // Player* p = e; // Invalid!
+  // Because e could be Enemy
+  // Although you can do:
+  // Player* p = (Player*)e;
+  // But it's *dangerous*, what if e is actually an *Enemy* or just an *Entity*? It will still cast without warning, which may cause the program *crashing*
+
+  // What we should do is using dynamic cast
+  Player* p = dynamic_cast<Player*>(e);
+}
+```
+
+Let's see an example:
+
+```c++
+// definition of 3 classes above
+
+int main() {
+  std::vector<Entity*> e_list;
+  for (int i = 0; i < 5; i++) {
+    e_list.push_back(new Player());
+  }
+  for (int i = 0; i < 10; i++) {
+    e_list.push_back(new Enemy());
+  }
+  for (int i = 0; i < 3; i++) {
+    e_list.push_back(new Entity());
+  }
+
+  int cnt_player = 0, cnt_enemy = 0, cnt_entity = 0;
+  for (auto e : e_list) {
+    if (dynamic_cast<Player*>(e)) {
+      cnt_player++;
+    }
+    if(dynamic_cast<Enemy*>(e)) {
+      cnt_enemy++;
+    }
+    if(dynamic_cast<Entity*>(e)) {
+      cnt_entity++;
+    }
+  }
+  std::cout << "Player: " << cnt_player << "\nEnemy: " << cnt_enemy << "\nEntity: " << cnt_entity << std::endl;
+  // Player: 5
+  // Enemy: 10
+  // Entity: 18
+}
+```
+
+How does `dynamic_cast` make it? It stores runtime type information (RTTI). If you turn off "enable runtime type information" in VS or set the following in `CMakeLists.txt`: MSVC: /GR (enable) or /GR- (disable) | GCC/Clang: -frtti (enable) or -fno-rtti (disable). And continue using `dynamic_cast`. Your compiler will warn you **undefined behavior**. If you insist running it, `dynamic_cast` will **throw exception: access violation**.
+
+RTTI takes time. And dynamic cast itself also takes time. But it makes our code safer.
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

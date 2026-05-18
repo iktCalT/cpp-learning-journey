@@ -3708,5 +3708,87 @@ How does `dynamic_cast` make it? It stores runtime type information (RTTI). If y
 
 RTTI takes time. And dynamic cast itself also takes time. But it makes our code safer.
 
+## BENCHMARKING in C++ (how to measure performance)
+
+```c++
+class Timer {
+public:
+  Timer() {
+    m_StartTimePoint = std::chrono::high_resolution_clock::now();
+  }
+  ~Timer() {
+    Stop();
+  }
+
+  void Stop() {
+    auto m_EndTimePoint = std::chrono::high_resolution_clock::now();
+
+    auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_StartTimePoint).time_since_epoch().count();
+    auto end = std::chrono::time_point_cast<std::chrono::microseconds>(m_EndTimePoint).time_since_epoch().count();
+
+    auto duration = end - start;
+    double ms = duration * 0.001; // microsecond to millisecond
+
+    std::cout << duration << "us (" << ms << "ms)\n";
+  }
+
+private:
+  std::chrono::time_point<std::chrono::high_resolution_clock> m_StartTimePoint;
+  std::chrono::time_point<std::chrono::high_resolution_clock> m_EndTimePoint;
+};
+
+int main() {
+  int value = 0;
+  {
+    Timer timer;
+    for (int i = 0; i < 100000; ++i) 
+      value += 2;
+  }
+
+  std::cout << value << std::endl;
+}
+```
+
+Please measure something that really exists, for example, the `for (int i = 0; i < 100000; ++i) value += 2;` above will be optimized by compiler to be `value = 200000`.  So, the measurement above is actually meaningless.
+
+```c++
+// Definition of class Timer
+
+int main() {
+  struct Vector2 {
+    float x, y;
+  };
+
+  std::cout << "Make Shared\n";
+  {
+    std::array<std::shared_ptr<Vector2>, 1000> sharedPtrs;
+
+    Timer timer;
+    for (int i = 0; i < 1000; ++i) 
+      sharedPtrs[i] = std::make_shared<Vector2>();
+  }
+
+  std::cout << "New Shared\n";
+  {
+    std::array<std::shared_ptr<Vector2>, 1000> sharedPtrs;
+
+    Timer timer;
+    for (int i = 0; i < 1000; ++i) 
+      sharedPtrs[i] = std::shared_ptr<Vector2>(new Vector2);
+  }
+
+  std::cout << "Make Unique\n";
+  {
+    std::array<std::shared_ptr<Vector2>, 1000> uniquePtrs;
+
+    Timer timer;
+    for (int i = 0; i < 1000; ++i) 
+      uniquePtrs[i] = std::make_unique<Vector2>();
+  }
+}
+```
+
+Make shared is faster than new shared (in release mode, not in debug mode).
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

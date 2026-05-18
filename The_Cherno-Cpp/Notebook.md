@@ -3897,5 +3897,92 @@ std::string value = data.value_or("Not present");
 
 If data has value, `value = data.value()`; else `value = "Not present"`.
 
+## Multiple TYPES of Data in a SINGLE VARIABLE in C++?
+
+`std::variant`, it's helpful if you don't want to handle with some data now. And that data may be different types, it could be `int` or `float` or a struct. You can declare it to be `std::variant`, and handle it later.
+
+```c++
+#include <variant>
+
+int main() {
+  std::variant<std::string, int> data; // it could be string or int
+
+  data = "Cherno";
+  std::cout << std::get<std::string>(data) << std::endl; // treat it as string
+
+  data = 2;
+  std::cout << std::get<int>(data) << std::endl; // treat it as int
+
+  // If we choose the wrong type:
+  std::get<std::string>(data);
+  // Exception: bad_variant_access
+}
+```
+
+We can handle the wrong type assignment by `try-catch` syntax. Apart form that, we can handle it with the following ways.
+
+- index()
+
+```c++
+std::variant<std::string, int> data;
+// assign value to data
+data.index(); // return 0 if data is std::string, return 1 if data is int
+```
+
+- get_if()
+
+```c++
+std::variant<std::string, int> data;
+// assign value to data
+if (auto value = std::get_if<std::string>(&data)) {
+  std::string& v = *value;
+}
+```
+
+If `data` is `std::string`, `std::get_if` will return a pointer to the string; if not, it will return nullptr.
+
+### Variant and union
+
+Some people say that `std::variant` is a type-safe `union`. But there are some differences.
+
+Size of a union is its largest member. However, variant all types consecutively.
+
+```c++
+int main() {
+  std::variant<std::string, int, double> data;
+
+  std::cout << sizeof(std::string) << std::endl; // 28
+  std::cout << sizeof(int) << std::endl; // 4
+  std::cout << sizeof(double) << std::endl; // 8
+  std::cout << sizeof(data) << std::endl; // 40 (= 28 + 4 + 8)
+}
+```
+
+So, `union`s are more efficient, but `variant`s are safer. So, you should **use variants** unless you are doing low-level optimization.
+
+With variant, we can not only know if the function mentioned in last section opened the file successfully, but also know what happened when it failed.
+
+```c++
+enum class ErrorCode {
+  None = 0, NotFound = 1, NoAccess = 2
+};
+
+std::variant<std::string, ErrorCode> ReadFileAsString() {
+  // If none
+  return 0;
+
+  // If not found
+  return 1;
+
+  // If cannot access
+  return 2;
+
+  // if success
+  std::string result;
+  // read file into result
+  return result;
+}
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

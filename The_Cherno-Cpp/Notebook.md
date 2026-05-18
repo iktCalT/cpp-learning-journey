@@ -176,7 +176,7 @@ Video: [![Control Flow][yt]](https://youtu.be/a3IZ8WaIFAA)
 
 ## POINTERS in C++
 
-This video is talking about raw pointers but smart pointers.  Smart pointers will be talked about in the future.
+This video is talking about raw pointers but smart pointers.  [Smart pointers](#smart-pointers-in-c-stdunique_ptr-stdshared_ptr-stdweak_ptr) will be talked about in the future.
 
 A pointer is an integer storing an memory address.
 
@@ -897,7 +897,7 @@ A string is an **array** of characters.
 
 So, `'A'` is a `char`. `"A"` is a char pointer (string).
 
-### C-style
+### C-style string
 
 Assigning a string: `const char* name = "Cherno";`.  
 
@@ -912,7 +912,7 @@ These three are equivalent
 `char name2[7] = { 'C', 'h', 'e', 'r', 'n', 'o', '\0' };`  
 `char name2[7] = { 'C', 'h', 'e', 'r', 'n', 'o', 0 };`
 
-### C++-style
+### C++-style string
 
 C++ standard library has a class called `std::string`. It's essentially a array of `char` (more specifically, `const char*`, same as above).  But there are a bunch of methods related to it.
 
@@ -2059,6 +2059,13 @@ This function takes an ***iterator***. Iterators are some special pointers. If I
 
 Pass the STL **by (const) reference** into functions.
 
+Be careful:
+
+- `std::vector<int>(10, 20)` -> create a vector with 10 elements, all elements are 20. **`()` calls constructor.**
+- `std::vector<int>{10, 20}` -> create a vector with 2 elements, which are 10 and 20 respectively. **`{}` matches `initializer_list` first, if couldn't match any, calls constructor.**
+
+So, remember that: for all classes, if you want to pass data, use `{}`, if you want to pass arguments, use `()`. If you want to initialize a empty object use `std::vector<int> v` or `std::vector<int> v{}`.
+
 ## Optimizing the usage of std::vector in C++
 
 This lecture is talking about how to use `std::vector` in a more optimal way. As for optimizing in a more lower-level way, it won't be covered here.
@@ -2409,6 +2416,10 @@ Then, find the executable file in `build/Game/Game`.
 
 ## How to Deal with Multiple Return Values in C++
 
+In Cherno's newer video, he said that now, he prefers structured bindings like tuples, pairs in recent years. Please check section [STRUCTURED BINDINGS in C++](#structured-bindings-in-c).
+
+Actually, a user has put forward this point in [comments](#new-feature-from-c17).
+
 ### Create a struct
 
 You can create a struct and return this struct. Cherno prefer this way. Read [this](#use-struct) section.
@@ -2453,7 +2464,7 @@ Pair: `pair_name.first` or `pair_name.second`
 
 #### New feature from C++17
 
-(copied from comment by  @alguienmasraro915)
+(copied from @alguienmasraro915's comment)
 
 *For anyone reading recently, there's a better way with structured binding since **c++17**:*
 
@@ -2561,7 +2572,7 @@ It's helpful, because the compiler will write code automatically for you. But do
 
 Cherno usually use templates in logging system and material system (for rendering graphics).
 
-### Note
+### Note - Templates
 
 (Copied from @sigmareaver680's comment)
 
@@ -3009,6 +3020,808 @@ int main() { // main thread
   worker.join(); // main thread will wait for worker thread to finish its jobs
   std::cout << "Main thread id=" << std::this_thread::get_id() << std::endl;
   std::cout << "Finished" << std::endl;
+}
+```
+
+## Timing in C++
+
+You can use some platform-specific libraries (e.g. win32 api) to get accurate result. But in most cases, `std::chrono` is enough.
+
+```c++
+#include <chrono>
+#include <iostream>
+#include <thread>
+
+int main() {
+  auto start = std::chrono::high_resolution_clock::now();
+
+  // some code
+  using namespace std::literals::chrono_literals;
+  std::this_thread::sleep_for(1s);
+
+  auto end = std::chrono::high_resolution_clock::now();
+
+  std::chrono::duration<float> duration = end - start;
+  std::cout << duration.count() << "s" << std::endl;
+}
+```
+
+You can do it with simpler codes.
+
+```c++
+#include <chrono>
+#include <iostream>
+
+struct Timer {
+  std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+  std::chrono::duration<float> duration;
+
+  // constructor
+  Timer() {
+    start = std::chrono::high_resolution_clock::now();
+  }
+
+  // destructor
+  ~Timer() {
+    end = std::chrono::high_resolution_clock::now();
+    duration = end - start;
+
+    float ms = duration.count() * 1000.0f;
+    std::cout << "Timer took " << ms << "ms" << std::endl;
+  }
+};
+
+void Function() {
+  Timer timer;
+
+  for(int i = 0; i < 100; i++) {
+    std::cout << "Hello" << std::endl;
+  }
+}
+
+int main() {
+  Function();
+}
+```
+
+`std::endl` is very slow, if you change it to `"\n"`, it would be much faster (on godblot, the previous one took 0.36857ms, while the latter one took 0.024833ms).
+
+According to @q_rsqrt5140's comment, *`std::endl` is slow because for each line it must flush buffer*.
+
+There are also many profiling tools. Read missing semester's [Lecture 4](https://missing.csail.mit.edu/2026/debugging-profiling/).
+
+## Multidimensional Arrays in C++(2D arrays)
+
+A 2D array is a 1D array of a 1D array.
+
+### Multidimensional array on stack
+
+It is very easy to create a multidimensional array on stack.
+
+```c++
+int main() {
+  // 5*4 2D array on stack
+  int a2d[5][4];
+  // 5*4*3 3D array on stack
+  int a3d[5][4][3];
+}
+```
+
+### Multidimensional array on heap
+
+But creating a multidimensional array on heap is harder
+
+#### Method 1 - NOT recommended
+
+Store pointer of lower dimensional array to higher dimensional array.
+
+```c++
+int main() {
+  // 5*4 2D array on heap
+  int** a2d = new int*[5]; // an array of 5 pointers to integer (each pointer is pointing to the beginning of an array)
+  for (int i = 0; i < 5; i++) {
+    a2d[i] = new int[4];
+  }
+
+  // 5*4*3 3D array on heap
+  int*** a3d = new int**[5];
+  for (int i = 0; i < 5; i++) {
+    a3d[i] = new int*[4];
+    for (int j = 0; j < 4; j++) {
+      a3d[i][j] = new int[3];
+    }
+  }
+  a3d[0][0][0] = 0;
+}
+```
+
+Delete a 2D array:
+
+```c++
+int main() {
+  // Define a m*n 2D array
+  for (int i = 0; i < m; i++) {
+    delete[] a2d[i];
+  }
+  delete[] a2d;
+}
+```
+
+This method will occupy more space if the size of array is small, because it needs to store extra pointers. And it is slower to access those elements, because it need to jump around different addresses.
+
+Moreover, it causes **memory fragmentation**—instead of storing all elements in a row, they are stored in random places. So that we **cannot** make use of **spacial locality** in iteration.
+
+REMEMBER: storing multidimensional array in this way is **much much slower** than storing them in a row.
+
+#### Method 2 - Recommended
+
+Storing all elements in a row.
+
+```c++
+int main() {
+  // a 5*4 array on heap
+  int* a2d = new int[5 * 4];
+  // assign array[1][2] to 0
+  a2d[1*5 + 2] = 0;
+
+  // deleting it is also simpler
+  delete[] a2d;
+}
+```
+
+## Sorting in C++
+
+`std::sort` can sort for you. It just needs a beginning iterator and an end iterator to sort for you. Of course, you can give more arguments to it.
+
+Complexity: O(N·log(N)).
+
+```c++
+int main() {
+  std::vector<int> values = {3,5,1,4,2};
+  // sort in descending order
+  std::sort(values.begin(), values.end(), std::greater<int>());
+}
+```
+
+### Compare function
+
+The default compare function is "operator<" (`std::less<T>()`), so it is sorted by ascending order (`values[i] < values[i+1]`).  You can pass any function which **receives 2 argument and returns a boolean, and `compare(x,y) = !compare(y,x)`** as the compare function.
+
+You can use the following compare functions
+
+1. default compare function
+2. standard library compare function object
+3. custom function object
+4. lambda expression
+
+Usage examples: see [cppreference.com](https://en.cppreference.com/cpp/algorithm/sort)
+
+```c++
+std::vector<int> values = {3,5,1,4,2};
+// lambda expression, sort in descending order, but place 1 at the end of vector
+std::sort(values.begin(), values.end(), [](int a, int b) {
+  if (a == 1) 
+    return false; // for any value, (1 < value) is false
+  if (b == 1)
+    return true; // for any value, (value < 1) is true
+  return a < b; 
+});
+```
+
+## Type Punning in C++
+
+Pun (n.): *the usually humorous use of a word in such a way as to suggest two or more of its meanings or the meaning of another word similar in sound*  
+Pun (v.): *to make puns*  
+– Merriam-Webster
+
+```c++
+int main() {
+  int a = 50; // in memory: 32 00 00 00
+  double value = a; // in memory: 00 00 00 00 00 00 49 40
+  std::cout << value << std::endl; // 50
+}
+```
+
+In general cases, C++ will convert an `int` into a `double` automatically for you. What if you don't want conversion, you just want to treat the bits of `int` as a `double`?
+
+### Type punning method 1
+
+```c++
+int main() {
+  int a = 50; 
+  double value = (double*)&a;
+}
+```
+
+Notice than **type punning is dangerous**, because:  
+
+- a: 32 00 00 00 (after a is 4 random bytes)
+- value: 32 00 00 00 + the 4 random bytes after a
+
+If the two types are of different size, you may encounter unexpected things. So, only use this method only you **must** use.
+
+### Type punning method 2 - NOT recommended
+
+Use the same address: `double& value = *(double*)&a`. Not recommended, because when you modify `value`, you will modify `a`, too. And because `value` and `a` are different types, you may **modify a in an unexpected way**.
+
+### Type punning method 3 - Recommended
+
+Use union. Read section [Unions in C++](#unions-in-c).
+
+### Example - treat struct as array
+
+```c++
+struct Entity {
+  int x, y;
+};
+
+int main() {
+  Entity e = { 5, 8 };
+  int* position = (int*)&e; // now you can treat e as an integer array.
+  std::cout << position[0] << ", " << position[1] << std::endl; // 5, 8
+
+  // you can also do:
+  int y = *(int*)((char*)&e + sizeof(int));
+  std::cout << y << std::endl; // 8
+}
+```
+
+This is useful in this situation:
+
+For example, if you want to pass the object as an argument, but that argument must be an array. Instead of writing a method that returns an array (it's slow), you can pass the object directly, you just need to say: treat this object as an array.
+
+```c++
+struct Entity {
+  int x, y;
+  // Instead of using the following definition
+  // int* GetPositions() {
+  //   int* a = new int[2];
+  //   a[0] = x;
+  //   a[1] = y;
+  //   return a;
+  // }
+
+  // Use this definition
+  int* GetPositions() {
+    return &x;
+  }
+};
+
+void function(int* position) {
+  std::cout << position[0] << ", " << position[1] << std::endl;
+}
+
+int main() {
+  Entity e{1,2};
+  function(e.GetPositions());
+}
+```
+
+## Unions in C++
+
+A union is able to hold multiple types, but it can only choose one to hold.
+
+People usually us unions for type punning. They are more readable, and more importantly, if you want to explain an int in double, you won't include random bits. For example: if you want to interpret int 2 as double
+
+Not use union:  
+int: 02 00 00 00 12 34 56 78, where 12 34 56 78 are random bits  
+double: explain 02 00 00 00 12 34 56 78
+
+Use union  
+int: 02 00 00 00 00 00 00 00, extra bits of union are set to 0  
+double: explain 02 00 00 00 00 00 00 00
+
+But be careful: in some compilers, if you don't use `{}` when you are initializing the union, bits might be random.
+
+```c++
+struct Union {
+  union {
+    float a;
+    int b;
+  };  // 8 bytes
+};
+
+int main() {
+  Union u{};
+  u.a = 2;
+  // or Union u{2};
+  std::cout << u.b << std::endl; //1073741824, the explain 02 00 00 00 00 00 00 00 in double
+
+  Union u; // not use {}
+  u.a = 2;
+  std::cout << u.b << std::endl; // in some compiler, it will explain 02 00 00 00 + random bits
+}
+```
+
+How to make use of unions.
+
+```c++
+struct Vector2 {
+  float x, y;
+};
+
+struct Vector4 {
+  // Vector 2 can be represented to be either 4 floats, or 2 Vector2s
+  union {
+    struct {
+      float x, y, z, w;
+    };
+    struct {
+      Vector2 a, b;
+    };
+  };
+};
+
+void PrintVector2(const Vector2& vector) {
+  std::cout << vector.x << ", " << vector.y << std::endl;
+}
+
+int main() {
+  Vector4 vector{ 1.0f, 2.0f, 3.0f, 4.0f };
+  PrintVector2(vector.a); // 1, 2
+  PrintVector2(vector.b); // 3, 4
+  vector.z = 500.0f;
+  PrintVector2(vector.a); // 1, 2
+  PrintVector2(vector.b); // 3, 500
+}
+```
+
+### Notes: type punning and reinterpret cast
+
+Almost everything you do with type punning can be achieved with reinterpret cast. So, use [reinterpret cast](#c-style-cast-1).
+
+## Virtual Destructors in C++
+
+If you have a class B inherited form class A, and you passed a class B's object b into a function, which receives A as argument. When you delete this object in this function, you hope that class B's destructor (not only A's) is called, you can use **virtual destructor** to make it happen.
+
+```c++
+class Base {
+public:
+  Base() { std::cout << "Base Constructor" << std::endl; }
+  ~Base() { std::cout << "Base Destructor" << std::endl; }
+};
+
+class Derived : public Base {
+private:
+  int* m_Array;
+public:
+  Derived() { m_Array = new int[5]; std::cout << "Derived Constructor" << std::endl; }
+  ~Derived() { delete[] m_Array; std::cout << "Derived Destructor" << std::endl; }
+}; // If destructor is not called, there will be memory leak
+
+int main() {
+  Base* base = new Base();  // Base Constructor
+  delete base;  // Base Destructor
+  std::cout << "---------------" << std::endl;
+
+  // Expected case, both Base's and Derived constructors and destructors are called
+  Derived* derived = new Derived(); // Base Constructor\nDerived Constructor
+  delete derived; // Derived Destructor\nBase Destructor
+  std::cout << "---------------" << std::endl;
+
+  // Constructor: as expected; Destructor: only Base's is called - not desired
+  Base* poly = new Derived(); // Base Constructor\nDerived Constructor
+  delete poly; // Base Destructor
+}
+```
+
+Both constructors are called correctly, because in `new Derived()`, it's treated as derived class. It's assigned to a Base class pointer after that.
+
+If we treat a derived class object as a base class object, and delete it. The compiler only know it's a base class object, it doesn't know the destructor is overridden. So the derived class's destructor will not be called. To fix this problem, we can use **virtual destructor**. When you mark a method as `virtual`, you are telling C++ that this method might be overridden, please check it.
+
+This is all we need: `virtual ~Base() { std::cout << "Base Destructor" << std::endl; }`
+
+It even works for multiple derived classes:
+
+```c++
+class Base {
+public:
+  Base() { std::cout << "Base Constructor" << std::endl; }
+  virtual ~Base() { std::cout << "Base Destructor" << std::endl; }
+};
+
+class Derived : public Base {
+public:
+  Derived() { std::cout << "Derived Constructor" << std::endl; }
+  ~Derived() { std::cout << "Derived Destructor" << std::endl; }
+};
+
+class Derived2 : public Derived {
+public:
+  Derived2() { std::cout << "Derived 2 Constructor" << std::endl; }
+  ~Derived2() { std::cout << "Derived 2 Destructor" << std::endl; }
+};
+
+int main() {
+  Base* poly2 = new Derived2();
+  delete poly2; // 3 destructors are called
+  Derived* poly = new Derived2();
+  delete poly; // 3 destructors are called
+}
+```
+
+Take away: ***if your class may have any subclass, be 200% to declare its destructor `virtual`.***
+
+## Casting in C++
+
+This topic needs practice.
+
+### Implicit cast
+
+```c++
+int main() {
+  int a = 5
+  double value = a;
+}
+```
+
+This is implicit casting, we don't need to cast `a` into double explicitly before assignment (`double value = (double) a`).
+
+### C-style cast
+
+```c++
+int main() {
+  double value = 5.25;
+  double a = (int)value + 5.3; // 10.3
+  double b = (int)(value + 5.3); // 10
+}
+```
+
+### C++-style cast
+
+There are 4 C++-style cast operators:
+
+- static cast `static_cast <new_type> (exp);`: the most commonly used one.
+- dynamic cast `dynamic_cast <new_type> (exp);`: *is mainly used to perform downcasting (converting a pointer/reference of a base class to a derived class) in polymorphisms and inheritance*.
+- const cast `const_cast <new_type> (exp);`: *is used to modify the const or volatile qualifier of a variable*.
+- reinterpret cast `reinterpret_cast <new_type> (exp);`: *is used to convert the pointer to any other type of pointer*. It re-interpret a memory address (type punning).
+
+They cannot do anything that C-style cast cannot do. They are just syntax sugars, making our life easier. They perform checking, which makes your program safer. And you can search for them in source code!
+
+For more information, read this [geeksforgeeks](https://www.geeksforgeeks.org/cpp/casting-operators-in-cpp/) page.
+
+For instance, static_cast and reinterpret_cast
+
+```c++
+class Base {
+public: 
+  Base() {}
+  virtual ~Base() {}
+}
+
+int main() {
+  double value = 5.25;
+  double s = static_cast<int>(value) + 5.3; // 10.3
+
+  // C++-style cast operators will do validation for us
+  static_cast<Base*>(&value); // Error!
+  reinterpret_cast<Base*>(&value); // No error
+}
+```
+
+Example of dynamic_class:
+
+```c++
+class Base {
+public: 
+  Base() {}
+  virtual ~Base() {}
+};
+
+class Derived : public Base {
+public:
+  Derived() {};
+  ~Derived() {};
+};
+
+class AnotherClass : public Base {
+public:
+  AnotherClass() {};
+  ~AnotherClass() {};
+};
+
+int main() {
+  Derived* derived = new Derived();
+  AnotherClass derived2 = new AnotherClass();
+  Base* base = derived;
+
+  // A lot of code here
+
+  // Now, assume that we forget base is a instance of Derived or AnotherClass
+  // We can use the following method to verify
+
+  AnotherClass* ac = dynamic_cast<AnotherClass*>(base);
+  if (!ac) { // if dynamic_cast fails, it will return nullptr
+    std::cout << "Not a instance of AnotherClass" << std::endl;
+  } else {
+    std::cout << "A instance of AnotherClass" << std::endl;
+  }
+}
+```
+
+- Output: "Not a instance of AnotherClass".  
+- If we change `Base* base = derived;` t0 `Base* base = derived2;`, the output will be "A instance of AnotherClass".  
+- If `Base* base = new Base();`, "Not a instance of AnotherClass".
+
+Cherno use C-style cast for most of time. However, he encourage us to use C++-style cast in new projects. Because they really make our code more solid and is better for cooperators.
+
+## Conditional and Action Breakpoints in C++
+
+Watch demo in Cherno's video. [![Conditional and Action Breakpoints][yt]](https://youtu.be/9ncNA6Co2Nk)
+
+## Safety in modern C++ and how to teach it
+
+This video is about should people use smart pointers everywhere or can use raw pointers some times. -> We should not interfere others' choices. Everyone should have the right to write code freely.
+
+What is does word "safe" mean in C++? It relates to **crashes, memory leak, access violations**. There many aspects of C++ safety, including **exceptions, error checking, pointers**. This section will only talk about pointers.
+
+Potential problems of using raw pointers: memory leak, ownership problem [![ownership problem][yt]](https://youtu.be/CWglkNBUmD4?t=317).
+
+Smart pointers are more favorable than raw pointers. It only do one thing for us: `delete` the object. Automating this line is very important for us.
+
+It's okay not use smart pointers provided by standard library, **you can create your own smart pointers**. But, **you should 100% use smart pointers in your production code!** It's also okay to use raw pointers when you are testing something in a small sandbox.
+
+## Precompiled Headers in C++
+
+A precompiled header (PCH) is a header file composed of many header files and is already complied into binary. They are vital for large projects.
+
+*They give you an opportunity to grab a bunch of header files, and convert them into a kind of compiled format. Then compiler can use them directly, instead of reading them over and over again.*
+
+For example, C++'s standard library is precompiled, so they don't need to be recompiled every time you use them or every time you modify the some code. **With PCHs, the compilation time will be much much more shorter.**
+
+**However, don't place source code that will change frequently in your PCH, otherwise, every time you change it, the PCH have to be recompiled.** Place those files that are used frequently but not likely to change in your PCH. Often, libraries written by others are placed in PCH (e.g. standard library, Windows API).
+
+**And don't put everything you need into your PCH, otherwise, it will be hard to read.** For example, the GLFW library, it may only be used in one `.cpp` file, so, just `#include <glfw3>` in that cpp file, rather than place it in your PCH. What you should place in your PCH are things like STL, it is used everywhere.
+
+### How to use a PCH
+
+Use `#pragma once`. [![precompiled header demo][yt]](https://youtu.be/eSI4wctZUto)
+
+```c++
+// main.cpp
+#include "pch.h"  // You can give it any name, but it must be **the first include**
+
+int main() {
+  std::cout << "Hello World!" << std::endl;
+}
+```
+
+```c++
+// pch.cpp
+#include "pch.h"
+```
+
+```c++
+// pch.h
+#pragma once
+
+#include <iostream>
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <thread>
+#include <utility>
+
+// Data structures
+#include <string>
+#include <stack>
+#include <deque>
+#include <array>
+#include <vector>
+#include <set>
+#include <map>
+#include <unordered_set>
+#include <unordered_map>
+
+// Windows API
+// #include <Windows.h>
+```
+
+```cmake
+# CMakeLists.txt
+cmake_minimum_required(VERSION 3.16)
+
+project(MyProject LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+add_executable(MyProject
+    src/main.cpp
+    src/pch.cpp
+)
+
+# only use pch for C++ files
+target_precompile_headers(MyProject PRIVATE
+    "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h>"
+) 
+```
+
+## Dynamic Casting in C++
+
+It's a [C++ style cast](#c-style-cast-1). For example, if we have 1 parent class (`Entity`) and 2 child classes (`Player` and `Enemy`). It's easy to cast a `Player`'s instance to `Entity`, just use the implicit casting. However, if we have a `Entity` class's instance, we don't know if it can be casted to a `Player`, we can **use `dynamic_cast` to validate**. If it can be casted successfully, it will cast and return its address; otherwise, it will return `nullptr`.
+
+```c++
+class Entity {
+  virtual void PrintName() {} // making it polymorphic
+};
+
+class Player : public Entity {
+};
+
+class Enemy : public Entity {
+};
+
+int main() {
+  Player* player = new Player(); // use smart pointer in production code
+
+  // player is associate with 2 classes: Entity and Player
+  // So, we can cast it to any of these classes easily (implicit cast)
+  Entity* e = player;
+
+  // However, e cannot be casted to Player with implicit cast
+  // Player* p = e; // Invalid!
+  // Because e could be Enemy
+  // Although you can do:
+  // Player* p = (Player*)e;
+  // But it's *dangerous*, what if e is actually an *Enemy* or just an *Entity*? It will still cast without warning, which may cause the program *crashing*
+
+  // What we should do is using dynamic cast
+  Player* p = dynamic_cast<Player*>(e);
+}
+```
+
+Let's see an example:
+
+```c++
+// definition of 3 classes above
+
+int main() {
+  std::vector<Entity*> e_list;
+  for (int i = 0; i < 5; i++) {
+    e_list.push_back(new Player());
+  }
+  for (int i = 0; i < 10; i++) {
+    e_list.push_back(new Enemy());
+  }
+  for (int i = 0; i < 3; i++) {
+    e_list.push_back(new Entity());
+  }
+
+  int cnt_player = 0, cnt_enemy = 0, cnt_entity = 0;
+  for (auto e : e_list) {
+    if (dynamic_cast<Player*>(e)) {
+      cnt_player++;
+    }
+    if(dynamic_cast<Enemy*>(e)) {
+      cnt_enemy++;
+    }
+    if(dynamic_cast<Entity*>(e)) {
+      cnt_entity++;
+    }
+  }
+  std::cout << "Player: " << cnt_player << "\nEnemy: " << cnt_enemy << "\nEntity: " << cnt_entity << std::endl;
+  // Player: 5
+  // Enemy: 10
+  // Entity: 18
+}
+```
+
+How does `dynamic_cast` make it? It stores runtime type information (RTTI). If you turn off "enable runtime type information" in VS or set the following in `CMakeLists.txt`: MSVC: /GR (enable) or /GR- (disable) | GCC/Clang: -frtti (enable) or -fno-rtti (disable). And continue using `dynamic_cast`. Your compiler will warn you **undefined behavior**. If you insist running it, `dynamic_cast` will **throw exception: access violation**.
+
+RTTI takes time. And dynamic cast itself also takes time. But it makes our code safer.
+
+## BENCHMARKING in C++ (how to measure performance)
+
+```c++
+class Timer {
+public:
+  Timer() {
+    m_StartTimePoint = std::chrono::high_resolution_clock::now();
+  }
+  ~Timer() {
+    Stop();
+  }
+
+  void Stop() {
+    auto m_EndTimePoint = std::chrono::high_resolution_clock::now();
+
+    auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_StartTimePoint).time_since_epoch().count();
+    auto end = std::chrono::time_point_cast<std::chrono::microseconds>(m_EndTimePoint).time_since_epoch().count();
+
+    auto duration = end - start;
+    double ms = duration * 0.001; // microsecond to millisecond
+
+    std::cout << duration << "us (" << ms << "ms)\n";
+  }
+
+private:
+  std::chrono::time_point<std::chrono::high_resolution_clock> m_StartTimePoint;
+  std::chrono::time_point<std::chrono::high_resolution_clock> m_EndTimePoint;
+};
+
+int main() {
+  int value = 0;
+  {
+    Timer timer;
+    for (int i = 0; i < 100000; ++i) 
+      value += 2;
+  }
+
+  std::cout << value << std::endl;
+}
+```
+
+Please measure something that really exists, for example, the `for (int i = 0; i < 100000; ++i) value += 2;` above will be optimized by compiler to be `value = 200000`.  So, the measurement above is actually meaningless.
+
+```c++
+// Definition of class Timer
+
+int main() {
+  struct Vector2 {
+    float x, y;
+  };
+
+  std::cout << "Make Shared\n";
+  {
+    std::array<std::shared_ptr<Vector2>, 1000> sharedPtrs;
+
+    Timer timer;
+    for (int i = 0; i < 1000; ++i) 
+      sharedPtrs[i] = std::make_shared<Vector2>();
+  }
+
+  std::cout << "New Shared\n";
+  {
+    std::array<std::shared_ptr<Vector2>, 1000> sharedPtrs;
+
+    Timer timer;
+    for (int i = 0; i < 1000; ++i) 
+      sharedPtrs[i] = std::shared_ptr<Vector2>(new Vector2);
+  }
+
+  std::cout << "Make Unique\n";
+  {
+    std::array<std::shared_ptr<Vector2>, 1000> uniquePtrs;
+
+    Timer timer;
+    for (int i = 0; i < 1000; ++i) 
+      uniquePtrs[i] = std::make_unique<Vector2>();
+  }
+}
+```
+
+Make shared is faster than new shared (in release mode, not in debug mode).
+
+## STRUCTURED BINDINGS in C++
+
+Previous section: [How to Deal with Multiple Return Values in C++](#how-to-deal-with-multiple-return-values-in-c)
+
+Video: [![STRUCTURED BINDINGS in C++][yt]](https://youtu.be/eUsTO5BO3WI)
+
+```c++
+std::tuple<std::string, int> CreatePerson() {
+  return { "Cherno", 24 };
+}
+
+int main() {
+  { // keep the variable in scope, so we don't need to name those variables name1, name2, name3, age1, age2, age3
+  // Previous version 1
+  auto person = CreatePerson();
+  std::string name = std::get<0>(person);
+  int age = std::get<1>(person);
+  }
+
+  {
+  // Pervious version 2
+  std::string name;
+  int age;
+  std::tie(name, age) = CreatePerson();
+  }
+
+  // Structured binding, introduced in C++ 17
+  auto[name, age] = CreatePerson();
 }
 ```
 

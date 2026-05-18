@@ -2416,6 +2416,10 @@ Then, find the executable file in `build/Game/Game`.
 
 ## How to Deal with Multiple Return Values in C++
 
+In Cherno's newer video, he said that now, he prefers structured bindings like tuples, pairs in recent years. Please check section [STRUCTURED BINDINGS in C++](#structured-bindings-in-c).
+
+Actually, a user has put forward this point in [comments](#new-feature-from-c17).
+
 ### Create a struct
 
 You can create a struct and return this struct. Cherno prefer this way. Read [this](#use-struct) section.
@@ -2568,7 +2572,7 @@ It's helpful, because the compiler will write code automatically for you. But do
 
 Cherno usually use templates in logging system and material system (for rendering graphics).
 
-### Note
+### Note - Templates
 
 (Copied from @sigmareaver680's comment)
 
@@ -3789,6 +3793,37 @@ int main() {
 ```
 
 Make shared is faster than new shared (in release mode, not in debug mode).
+
+## STRUCTURED BINDINGS in C++
+
+Previous section: [How to Deal with Multiple Return Values in C++](#how-to-deal-with-multiple-return-values-in-c)
+
+Video: [![STRUCTURED BINDINGS in C++][yt]](https://youtu.be/eUsTO5BO3WI)
+
+```c++
+std::tuple<std::string, int> CreatePerson() {
+  return { "Cherno", 24 };
+}
+
+int main() {
+  { // keep the variable in scope, so we don't need to name those variables name1, name2, name3, age1, age2, age3
+  // Previous version 1
+  auto person = CreatePerson();
+  std::string name = std::get<0>(person);
+  int age = std::get<1>(person);
+  }
+
+  {
+  // Pervious version 2
+  std::string name;
+  int age;
+  std::tie(name, age) = CreatePerson();
+  }
+
+  // Structured binding, introduced in C++ 17
+  auto[name, age] = CreatePerson();
+}
+```
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

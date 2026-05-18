@@ -3984,5 +3984,64 @@ std::variant<std::string, ErrorCode> ReadFileAsString() {
 }
 ```
 
+## How to store ANY data in C++
+
+You can store anything with `std::any` (C++ 17 feature).
+
+```c++
+#include<any>
+
+int main() {
+  std::any data;
+  data = 2;
+  data = "Cherno";
+  
+  // cast
+  const char* str = std::any_cast<const char*>(data);
+
+  std::string str2 = std::any_cast<std::string>(data); // Invalid, because "Cherno" is const char* rather than std::string.
+}
+```
+
+It's like `std::variant`. But `std::any` is worse. For example, this won't work:
+
+```c++
+std::any data; 
+data = "Cherno";
+std::any_cast<std::string>(data);
+```
+
+Because "Cherno" is a `const char*`, rather than a `std::string`. But if data is a variant:
+
+```c++
+std::variant<int, std::string> data;
+data = "Cherno";
+std::string str = std::get<std::string>(data);
+```
+
+This will work properly, because "Cherno" is converted to `std::string` implicitly.
+
+### How does std::any work
+
+For small types (int, float, double), it's a union. For larg types (a large class, struct), it will create a void pointer and allocate memory dynamically (not good for performance). So, don't use `std::any` to store large types. In MSVC, types smaller than 32 bytes are classified as small types.
+
+Watch video [![any][yt]](https://youtu.be/7nPrUBNGRAk?t=594). If larger than 32 bytes, it will allocate for you.
+
+### Don't copy data
+
+So, don't write
+
+```c++
+std::any data; 
+data = std::string("Cherno");
+std::string str = std::any_cast<std::string>(data);
+```
+
+Write `std::string& str = std::any_cast<std::string&>(data);` (notice two `&`), instead.
+
+### When to use
+
+Actually, it is **useless**. `std::variant` is more useful than `std::any`. If you need to store any data, just use void pointer `void*`, it won't cause uncontrollable dynamic memory allocation.
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

@@ -3825,5 +3825,77 @@ int main() {
 }
 ```
 
+## How to Deal with OPTIONAL Data in C++
+
+`std::optional` is a feature introduced from C++ 17 to deal with data may or may not be there.
+
+### Without std::optional
+
+```c++
+#include <fstream>
+
+std::string ReadFileAsString(const std::string& filepath) {
+  std::ifstream stream(filepath); // ifstream: input file stream
+  if (stream) {
+    std::string result;
+    // read file contents into result
+    stream.close();
+    return result;
+  }
+
+  return std::string();
+}
+
+int main() {
+  std::string data = ReadFileAsString("data.txt");
+  if (data != "") {
+    std::cout << "File 'data.txt' could not be opened!" << std::endl;
+  }
+
+  // following code
+}
+```
+
+This is not good, because if file `"data.txt"` exists and could be opened, but it's empty, we handle it in file-could-not-be-opened way.
+
+We can fix this by adding another parameter `bool success`. But it still not very elegant. `std::optional` can handle this problem nicely.
+
+### With std::optional
+
+```c++
+#include<optional>
+#include <fstream>
+
+std::optional<std::string> ReadFileAsString(const std::string& filepath) {
+  std::ifstream stream(filepath); // ifstream: input file stream
+  if (stream) {
+    std::string result;
+    // read file contents into result
+    stream.close();
+    return result; // not changed
+  }
+
+  return {}; // empty option
+}
+
+int main() {
+  auto data = ReadFileAsString("data.txt");
+  if (!data) { // or if (!data.has_value)
+    std::cout << "File 'data.txt' could not be opened!" << std::endl;
+  }
+
+  // following code
+}
+```
+
+We can set default value for std::optional with `value_or(default)`.
+
+```c++
+auto data = ReadFileAsString("data.txt"); // data is std::optional<std::string>
+std::string value = data.value_or("Not present");
+```
+
+If data has value, `value = data.value()`; else `value = "Not present"`.
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

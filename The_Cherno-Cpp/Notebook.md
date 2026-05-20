@@ -4184,5 +4184,17 @@ std::string firstName = name.substr(0, 26);
 std::string lastName = name.substr(17, 20);
 ```
 
+## VISUAL BENCHMARKING in C++ (how to measure performance visually)
+
+With chrome tracing, you can visualize your programs' performance. Generate a ".json" file (function `WriteProfile` in `Instrumentor.h` will do it for us) and type "chrome://tracing/" in your Chrome to visualize it.
+
+`Instrumentor.h`: Written by Cherno [on Github](https://gist.github.com/TheCherno/31f135eea6ee729ab5f26a6908eb3a5e). Definitely check it out!
+
+Watch the video [![profiling][yt]](https://youtu.be/xlAH4dbMVnU).  Or Missing Semester [Debugging and Profiling](https://missing.csail.mit.edu/2026/debugging-profiling/).
+
+### Notes about Instrumentor
+
+*Very nice video but there is one thing you forgot in your implementation of the Instrumentor. The WriteProfile function isn't threadsafe because it allows different threads to write to the json file at the same time which formats the file incorrectly. To fix it, just add a mutex and lock it at the start of the WriteProfile function. Keep up the good work.*
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

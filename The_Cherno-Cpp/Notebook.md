@@ -4108,5 +4108,81 @@ Another example: see [./demo/Async/async.cc](./demo/Async/async.cc). Remember to
 
 *Requiring people to use std::ref forces them to think about why they're passing by reference, (and if they're making an error, possibly realize it) and displays deliberate intent within the code.*
 
+## How to make your STRINGS FASTER in C++
+
+`std::string` love to allocate memory, that will slow down our program, so, try your best to avoid it.
+
+Watch the video. [![how to make your strings faster][yt]](https://youtu.be/ZO68JEgoPeg)
+
+```c++
+static uint32_t s_AllocCount = 0;
+
+void* operator new(size_t size) {
+  s_AllocCount++;
+  std::cout << "Allocating " << size << " bytes\n";
+  return malloc(size);
+}
+
+void PrintName(const std::string& name) {
+  std::cout << name << std::endl;
+}
+
+int main() {
+  std::string name = "Yan Chernikov"; // 1st allocation
+  std::string firstName = name.substr(0, 3); // 2nd allocation
+  std::string lastName = name.substr(4, 9); // 3rd allocation
+
+  PrintName(firstName);
+  PrintName(lastName);
+
+  std::cout << s_AllocCount << std::endl;
+}
+```
+
+### String View
+
+String view is a pointer to an existing memory of a string plus a size.
+
+```c++
+// 1 allocation
+void PrintName(const std::string& name) {
+  std::cout << name << std::endl;
+}
+
+int main() {
+  std::string name = "Yan Chernikov"; // 1st allocation
+  std::string_view firstName(name.c_str(), 3);
+  std::string_view lastName(name.c_str() + 4, 9);
+  // call PrintName
+}
+```
+
+```c++
+// 0 allocation!!!!
+void PrintName(const std::string_view name) { // change to string_view
+  std::cout << name << std::endl;
+}
+
+int main() {
+  const char* name = "Yan Chernikov"; // no allocation!
+  std::string_view firstName(name, 3);
+  std::string_view lastName(name + 4, 9);
+  // call PrintName
+}
+```
+
+### New feature of string from C++17
+
+From @abhikjain's comment
+
+*When using clang with C++17,  the string was stored on stack, not heap. When the size of string exceeded beyond 32 bytes that it was stored on the heap. So those of you getting 0 allocations,  just increase the size of your string.*
+
+```c++
+// try this
+std::string name = "abcdefghijklmnopqrstuvwxyz 0123456789";
+std::string firstName = name.substr(0, 26);
+std::string lastName = name.substr(17, 20);
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

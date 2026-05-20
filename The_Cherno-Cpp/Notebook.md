@@ -4043,5 +4043,70 @@ Write `std::string& str = std::any_cast<std::string&>(data);` (notice two `&`), 
 
 Actually, it is **useless**. `std::variant` is more useful than `std::any`. If you need to store any data, just use void pointer `void*`, it won't cause uncontrollable dynamic memory allocation.
 
+## How to make C++ run FASTER (with std::async)
+
+```c++
+#include <future>
+static std::mutex s_MeshesMutex;
+
+struct StructName {
+  // "Hazel" is a game engine written by Cherno
+  std::vector<Hazel::Ref<Hazel::Mesh>> m_Meshes;
+  std::vector<std::future<void>> m_Futures;
+};
+
+// We should pass meshes by address
+static void LoadMeshAsync(std::vector<Ref<Mesh>>* meshes, std::string filepath) {
+  // Load meshes parallel
+  auto mesh = Mesh::Load(filepath);
+
+  // vector meshes can only be accesses by at most one thread at any time
+  std::lock_guard<std::mutex> lock(s_MeshesMutex); // Get mutex lock
+  meshes->push_back(mesh);
+} // Automatically release lock when get out of the scope
+
+void LoadMeshes() {
+  // ifstream: input file stream
+  std::ifstream stream("src/Models.txt");
+  // Read the file and push_back each line to meshFilepaths
+  std::string line;
+  std::vector<std::string> meshFilepaths;
+  while (std::getline(stream, line))
+    meshFilepaths.push_back(line);
+
+#define ASYNC 1
+#if ASYNC
+  // Load meshes with multiple threads (asynchronous)
+  for (const auto& file : meshFilepaths) {
+    // std::async(async_method, function_name, arguments...)
+    m_Futures.push_back(std::async(std::launch::async, LoadMesh, &m_Meshes, file));
+  }
+#else
+  // Load meshes sequentially (synchronous)
+  for (const auto& file : meshFilepaths) {
+    m_Meshes.push_back(Mesh::Load(file));
+  }
+#endif
+}
+```
+
+\[Note\]
+
+1. In function `LoadMeshAsync`, we should pass `meshes` by address: [![pass by pointer][yt]](https://youtu.be/5HWCsmE9DrE?t=1065)
+2. Use `std::ref()` to pass by reference to threads.
+3. In VS, you can see parallel stacks by clicking "DEBUG - Windows - Parallel Stacks".
+
+Another example: see [./demo/Async/async.cc](./demo/Async/async.cc). Remember to disable compiler optimization with flag `-O0`: `g++ -O0 -g async.cc -o output/async && cd ./output && ./async`.
+
+### Why use "std::ref()", rather than "&"
+
+@w.mcnamara's comment:
+
+*std::thread requiring you to use std::ref instead of & is a deliberate design decision from the C++ committee to prevent you from shooting yourself in the foot when creating a thread.*
+
+*If you (for example) pass a local variable to a thread by reference, the variable may go out of scope before the thread uses it (because the thread executes in parallel), and then when that memory is accessed by reference in the newly created thread, it will result in undefined behavior.*
+
+*Requiring people to use std::ref forces them to think about why they're passing by reference, (and if they're making an error, possibly realize it) and displays deliberate intent within the code.*
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

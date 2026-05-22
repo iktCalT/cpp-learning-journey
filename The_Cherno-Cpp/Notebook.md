@@ -4196,5 +4196,105 @@ Watch the video [![profiling][yt]](https://youtu.be/xlAH4dbMVnU).  Or Missing Se
 
 *Very nice video but there is one thing you forgot in your implementation of the Instrumentor. The WriteProfile function isn't threadsafe because it allows different threads to write to the json file at the same time which formats the file incorrectly. To fix it, just add a mutex and lock it at the start of the WriteProfile function. Keep up the good work.*
 
+## SINGLETONS in C++
+
+A singleton is basically a class with only one instance. Single is very useful when we only want to instantiate once but want to repeatedly use it.
+
+For example, a random generator. We only want to instantiate it once (to give seed to it), but we want to use it many times. Another example is renderer.
+
+Singletons behave **like namespaces**. In C++ using singleton is a way **to organize a bunch of global variables and static functions** (static here means exist only in this translation unit).
+
+```c++
+class Random {
+public:
+  // Random instance = Random::Get()
+  // should be prohibited -> delete copy constructor
+  Random(const Random&) = delete;
+  // You can use Random& instance = Random::Get()
+
+  // To get access this class
+  static Random& Get() {
+    return s_Instance;
+  }
+  
+  float Float () {
+    return m_RandomGenerator;
+    // Let's **pretend** that m_RandomGenerator is a generated float
+  }
+
+  // Or, we can move Float() in private and create a static version
+  static float SFloat() { return Get().IFloat(); }
+
+private:
+  Random() {}
+
+  float m_RandomGenerator = 0.5f;
+
+  // we have to declare it elsewhere
+  static Random s_Instance;
+
+  float IFloat () { // internal Float()
+    return m_RandomGenerator;
+  }
+};
+
+// declaration of s_Instance
+Random Random::s_Instance;
+
+int main() {
+  // :: is used to call static methods
+  auto& random = Random::Get();
+  float number = random.Float();
+
+  // Or
+  float number2 = Random::SFloat();
+}
+```
+
+**We don't want constructors** (by marking them as `private`), because constructor allows people to instantiate them.
+
+We can also prevent creating `s_Instance`, create the instance in `Get()` function. Because `Get()` is a static function, `instance` will continue existing until the program ends.
+
+```c++
+class Random {
+public:
+  Random(const Random&) = delete;
+
+  static Random& Get() {
+    // Create instance
+    static Random instance;
+    return instance;
+  }
+
+  static float SFloat() { return Get().IFloat(); }
+
+private:
+  Random() {}
+  float m_RandomGenerator = 0.5f;
+  float IFloat () {
+    return m_RandomGenerator;
+  }
+};
+
+int main() {
+  float number = Random::SFloat();
+}
+```
+
+### Singleton has same effect as namespace
+
+If we want to write the code above in a `namespace` way.
+
+```c++
+namespace RandomClass {
+  static float s_RandomGenerator = 0.5f;
+  static float Float () { return s_RandomGenerator;}
+};
+
+int main() {
+  float number = RandomClass::Float();
+}
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

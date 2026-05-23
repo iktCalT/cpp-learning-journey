@@ -4485,5 +4485,11 @@ This section is talking about how to set up a C++ project so it can be automatic
 
 We can achieve this by using Jenkins. Watch the video [![Jenkins][yt]](https://youtu.be/FHPtchw-eHA?t=258).
 
+## Static Analysis in C++
+
+[![static analysis][yt]](https://youtu.be/vYW6TOwFK2M)
+
+You can use static analyzers (for example, PVS-Studio, this video's sponsor). But in 2026, LLMs can help you with that.
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

@@ -4491,5 +4491,32 @@ We can achieve this by using Jenkins. Watch the video [![Jenkins][yt]](https://y
 
 You can use static analyzers (for example, PVS-Studio, this video's sponsor). But in 2026, LLMs can help you with that.
 
+## Argument Evaluation Order in C++
+
+```c++
+void PrintSum(int a, int b) {
+  std::cout << a << " + " << b << " = " << (a + b) << std::endl;
+}
+
+int main() {
+  int value = 0;
+  PrintSum(value++, value++); // Undefined behavior!!!
+}
+```
+
+It's ***undefined behavior***, so the result depends on compiler. **NEVER WRITE CODE LIKE THIS!!!!!!!!**
+
+- MSVC C++14 (release mode): 1 + 0 = 1; -> 2nd argument is parsed first
+- MSVC C++14 (debug mode): 0 + 0 = 0; -> both are parsed parallel
+- MSVC C++17 (release mode): 1 + 0 = 1; -> same as C++14
+- gcc 9.3.0 C++2a(C+=20): 1 + 0 = 1;
+- gcc 9.3.0 C++14: 1 + 0 = 1;
+- clang C++2a(C++20): 0 + 1 = 1;
+- clang C++14: 0 + 1 = 1;
+
+Both gcc and clang give warning, while MSVC won't warn you.
+
+Tip: C++17 standard says that postfix-expressions has to be parsed before each expression. Meaning that if `PrintSum(value++, a + b);`, `value++` is parsed before `a + b`. However, for `PrintSum(value++, value++);` the order is undefined.
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

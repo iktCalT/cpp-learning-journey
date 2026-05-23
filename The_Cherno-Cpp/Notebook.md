@@ -4477,5 +4477,13 @@ int main() {
 }
 ```
 
+## Continuous Integration in C++
+
+Continuous Integration (CI) means contiguously integrate your code during development.
+
+This section is talking about how to set up a C++ project so it can be automatically build and tested every time it's pushed to GitHub.
+
+We can achieve this by using Jenkins. Watch the video [![Jenkins][yt]](https://youtu.be/FHPtchw-eHA?t=258).
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

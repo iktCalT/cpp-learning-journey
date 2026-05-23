@@ -4518,5 +4518,132 @@ Both gcc and clang give warning, while MSVC won't warn you.
 
 Tip: C++17 standard says that postfix-expressions has to be parsed before each expression. Meaning that if `PrintSum(value++, a + b);`, `value++` is parsed before `a + b`. However, for `PrintSum(value++, value++);` the order is undefined.
 
+## Move Semantics in C++
+
+Move semantics allow us to move objects around. In cases that we don't want to copy an object, but just want to change its ownership, we can use move semantics.
+
+```c++
+class String {
+public:
+  String() = default;
+  String(const char* string) {
+    printf("Created\n");
+    m_Size = strlen(string);
+    m_Data = new char[m_Size];
+    memcpy(m_Data, string, m_Size);
+  }
+  String(const String& other) {
+    printf("Copied\n");
+    m_Size = other.m_Size;
+    m_Data = new char[m_Size];
+    memcpy(m_Data, other.m_Data, m_Size);
+  }
+  ~String() {
+    delete m_Data;
+  }
+
+  void Print() {
+    for (uint32_t i = 0; i < m_Size; ++i) 
+      printf("%c", m_Data[i]);
+    printf("\n");
+  }
+
+private:
+  char* m_Data;
+  uint32_t m_Size;  
+};
+
+class Entity {
+public:
+  Entity(const String& name)
+    : m_Name(name) {
+  }
+
+  void PrintName() {
+    m_Name.Print();
+  }
+
+private:
+  String m_Name;
+};
+
+int main() {
+  Entity entity(String("Cherno")); // Created\nCopied\n
+  entity.PrintName(); // Cherno
+}
+```
+
+First, it convert "Cherno" from `const char*` to `String` (constructor called). Then, it is copied (copy constructor called) and passed to entity's constructor.
+
+Copy constructor is called and it allocates memory, which is not we want. To prevent copying, we can use move semantics. -> Write a move constructor.
+
+Here is an example without using `std::move`. `std::move` will be the topic of next section.
+
+```c++
+class String {
+public:
+  String() = default;
+  String(const char* string) {
+    printf("Created\n");
+    m_Size = strlen(string);
+    m_Data = new char[m_Size];
+    memcpy(m_Data, string, m_Size);
+  }
+  String(const String& other) {
+    printf("Copied\n");
+    m_Size = other.m_Size;
+    m_Data = new char[m_Size];
+    memcpy(m_Data, other.m_Data, m_Size);
+  }
+  // A move constructor, it accepts rvalues
+  String(String&& other) {
+    printf("Moved\n");
+    m_Size = other.m_Size;
+    m_Data = other.m_Data;
+
+    // Empty the original String
+    other.m_Size = 0;
+    other.m_Data = nullptr;
+  }
+  ~String() {
+    printf("Destroyed\n");
+    delete m_Data;
+  }
+
+  void Print() {
+    for (uint32_t i = 0; i < m_Size; ++i) 
+      printf("%c", m_Data[i]);
+    printf("\n");
+  }
+
+private:
+  char* m_Data;
+  uint32_t m_Size;  
+};
+
+class Entity {
+public:
+  Entity(const String& name)
+    : m_Name(name) {}
+  // A move constructor
+  Entity(String&& name)
+    : m_Name((String&&)name) {}
+
+  void PrintName() {
+    m_Name.Print();
+  }
+
+private:
+  String m_Name;
+};
+
+int main() {
+  Entity entity(String("Cherno"));
+  entity.PrintName();
+}
+```
+
+In `Entity(String&& name) : m_Name((String&&)name) {}`, you have to explicitly cast name to rvalue (String&&), otherwise, it will still be copied! You can also write `Entity(String&& name) : m_Name(std::move(name)) {}`.
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

@@ -4357,5 +4357,125 @@ Moreover, we can add breakpoint in `new` function, and see which line allocates 
 
 You can also find profiling tools to achieve this.
 
+## lvalues and rvalues in C++
+
+**Takeaway:**
+
+1. **rvalues are temporary, while lvalues can be stored in memory.**
+2. **`&` accepts lvalues, `&&` accepts rvalues, `const &` accepts both.**
+
+For `int i = 10;`, `i` is lvalue while `10` is rvalue. A rvalue is temporary, it can exist in registers but cannot be store in memory. While a lvalue can be stored in memory. So, you can get the address of a lvalue, but you cannot get the address of a rvalue.
+
+You cannot assign something to a rvalue, like `10 = i;` is illegal. But you can assign lvalue or rvalue to lvalue `int a = i;` is legal.
+
+The returning value (by copy) of a function is also rvalue. You can `int i = GetValue();` but you cannot `GetValue() = i;`.
+
+However, if a function returns a reference to a lvalue, it is a lvalue.
+
+```c++
+int& GetValue() { // return by reference
+  static int value = 10;
+  return value; // value is a rvalue
+}
+
+int main() {
+  int i = GetValue(); // Normal usage, legal
+  GetValue() = 5; // Also legal!
+
+  int k = GetValue();
+  std::cout << k << std::endl; // 5
+}
+```
+
+Since rvalues have no addresses, you cannot pass it by reference.
+
+```c++
+void SetValue(int value) {}
+void SetValue2(int& value) {}
+
+int main() {
+  int i = 5;
+  SetValue(i); // Legal
+  SetValue(10); // Legal
+  SetValue2(i); // Legal
+  SetValue2(10); // Illegal!!!
+}
+```
+
+### Const + rvalue
+
+Although in normal case, you cannot reference a rvalue. But if you assign it to a `const`, it is legal.
+
+```c++
+int& a = 10; // Illegal
+const int& a = 10; // Legal
+```
+
+So, if you want your `SetValue(int& value)` function has the ability to accept both rvalue and lvalue, make it const:
+
+```c++
+void SetValue(const int& value) {}
+
+int main() {
+  int i = 5;
+  SetValue(i); // Legal
+  SetValue(10); // Illegal!!!
+}
+```
+
+Another example:
+
+```c++
+std::string firstName = "Yan";
+std::string lastName = "Chernikov";
+std::string fullName = firstName + lastName;
+```
+
+In this example, lvalues are `firstName`, `lastName`, and `fullName`. And rvalues are `"Yan"`, `"Chernikov"`, and `firstName + lastName` (which is `YanChernikov`).
+
+So, you you create a function:
+
+```c++
+void PrintName(std::string& name) {
+  std::cout << name << std::endl;
+}
+```
+
+You cannot pass rvalues to it. So, `PrintName(firstName + lastName)` is illegal. To make your function supports rvalues, add `const`: `void PrintName(const std::string& name)`.
+
+So, a lot of functions in C++ accept **const reference** arguments.
+
+### rvalue reference
+
+If we want to create a function that ONLY accepts rvalues, use `&&`:
+
+```c++
+void PrintName(std::string&& name) {
+  std::cout << name << std::endl;
+}
+```
+
+Now, `PrintName()` can only accept rvalues. `PrintName(fullName);` is illegal, while `PrintName(firstName + lastName);` is legal.
+
+If both overloads exist, rvalues will prefer rvalue reference one.
+
+```c++
+void PrintName(const std::string& name) {
+  std::cout << "Both are acceptable" << std::endl;
+  std::cout << name << std::endl;
+}
+
+void PrintName(std::string&& name) {
+  std::cout << "rvalue" << std::endl;
+  std::cout << name << std::endl;
+}
+
+int main() {
+  std::string str = "Cherno";
+  PrintName(str); // Both are acceptable\nCherno
+  PrintName("" + str); // rvalue\nCherno
+}
+```
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

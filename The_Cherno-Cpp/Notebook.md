@@ -4296,5 +4296,15 @@ int main() {
 }
 ```
 
+## Small String Optimization in C++
+
+Strings are infamous for its slow speed (because it tent to allocate memory). Small stings can be optimized by C++ standard library (it may be introduced from C++17). It's called Small String Optimization (SSO).
+
+**Allocating memory must happen on heap.**
+
+If you have a small string (for 2020's MSVC, it's no greater than 15 characters), string will be on stack.
+
+[![small string optimization][yt]](https://youtu.be/S7oVXMzTo4w)
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

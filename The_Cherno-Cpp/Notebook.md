@@ -4306,5 +4306,56 @@ If you have a small string (for 2020's MSVC, it's no greater than 15 characters)
 
 [![small string optimization][yt]](https://youtu.be/S7oVXMzTo4w)
 
+## Track MEMORY ALLOCATIONS the Easy Way in C++
+
+We can track if memory is allocated and how many bytes are allocated by overriding `new` keyword.
+
+```c++
+struct AllocationMetrics {
+  uint32_t TotalAllocated = 0;
+  uint32_t TotalFreed = 0;
+
+  uint32_t CurrentUsage() { return TotalAllocated - TotalFreed; }
+};
+
+static AllocationMetrics s_AllocationMetrics;
+
+void* operator new(size_t size) {
+  std::cout << "Allocating " << size << " bytes." << std::endl;
+  s_AllocationMetrics.TotalAllocated += size;
+  return malloc(size);
+}
+
+void operator delete(void* memory) {
+  std::cout << "Freeing " << memory << std::endl;
+  free(memory);
+}
+
+void operator delete(void* memory, size_t size) {
+  std::cout << "Freeing " << size << " bytes from " << memory << std::endl;
+  s_AllocationMetrics.TotalFreed += size;
+  free(memory);
+}
+
+class Object {
+  int x, y, z;
+};
+
+int main() {
+  {
+    std::unique_ptr<Object> obj = std::make_unique<Object>(); // Allocating 12 bytes.
+  } // Freeing 12 bytes from 0x...
+
+  std::string str = "Cherno"; // won't allocate
+  std::string str2 = "Cherno large string"; // Allocating 20 bytes.
+
+  std::cout << s_AllocationMetrics.CurrentUsage() << std::endl; // 20
+} // Freeing 20 bytes from 0x...
+```
+
+Moreover, we can add breakpoint in `new` function, and see which line allocates memory.
+
+You can also find profiling tools to achieve this.
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

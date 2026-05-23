@@ -4577,7 +4577,7 @@ First, it convert "Cherno" from `const char*` to `String` (constructor called). 
 
 Copy constructor is called and it allocates memory, which is not we want. To prevent copying, we can use move semantics. -> Write a move constructor.
 
-Here is an example without using `std::move`. `std::move` will be the topic of next section.
+This section won't cover `std::move`. It will be the topic of [next section](#stdmove-and-the-move-assignment-operator-in-c). But just remember that `std::move` is a better way.
 
 ```c++
 class String {
@@ -4596,7 +4596,7 @@ public:
     memcpy(m_Data, other.m_Data, m_Size);
   }
   // A move constructor, it accepts rvalues
-  String(String&& other) {
+  String(String&& other) noexcept {
     printf("Moved\n");
     m_Size = other.m_Size;
     m_Data = other.m_Data;
@@ -4643,7 +4643,130 @@ int main() {
 }
 ```
 
-In `Entity(String&& name) : m_Name((String&&)name) {}`, you have to explicitly cast name to rvalue (String&&), otherwise, it will still be copied! You can also write `Entity(String&& name) : m_Name(std::move(name)) {}`.
+In `Entity(String&& name) : m_Name((String&&)name) {}`, you have to explicitly cast name to rvalue (String&&), otherwise, it will still be copied! You can also write `Entity(String&& name) : m_Name(std::move(name)) {}`. [`std::move`](#stdmove-and-the-move-assignment-operator-in-c) will be covered soon.
+
+## std::move and the Move Assignment Operator in C++
+
+Move constructor is covered in last section. This section will cover how to move a object into a existing object.
+
+```c++
+// Define String class (same as last section)
+
+int main() {
+  String string = "Hello";
+  String dest = string; // Copy String
+  String dest2((String&&)string); // Move String (is equivalent to String dest2 = (String&&)string;)
+}
+```
+
+Although we can use `String dest2((String&&)string);` to move objects, this is not the best way. `std::move` is a more clever and elegant way.
+
+### std::move
+
+**`std::move` convert a existing variable into a temporary value (rvalue).**
+
+```c++
+int main() {
+  String string = "Hello";
+  String dest = std::move(string);
+}
+```
+
+Or `String dest(std::move(string));`. Please remember that `Object instance(other);` is equivalent to `Object instance = other;`, where `other` is another instance of `Object`.
+
+### Move assignment operator
+
+But you cannot do this:
+
+```c++
+int main() {
+  String string = "Hello";
+  String dest = std::move(string);
+  dest = std::move(string); // Illegal
+}
+```
+
+Because `dest = std::move(string);` will call assignment operator (=), rather than **move assignment operator**. We have to define a move assignment operator.
+
+```c++
+class String {
+public:
+  String() = default;
+  String(const char* string) {
+    printf("Created\n");
+    m_Size = strlen(string);
+    m_Data = new char[m_Size];
+    memcpy(m_Data, string, m_Size);
+  }
+  String(const String& other) {
+    printf("Copied\n");
+    m_Size = other.m_Size;
+    m_Data = new char[m_Size];
+    memcpy(m_Data, other.m_Data, m_Size);
+  }
+  // A move constructor
+  String(String&& other) noexcept {
+    printf("Move constructor\n");
+    m_Size = other.m_Size;
+    m_Data = other.m_Data;
+
+    // Empty the original String
+    other.m_Size = 0;
+    other.m_Data = nullptr;
+  }
+
+  // A move assignment operator
+  String& operator=(String&& other) noexcept {
+    printf("Move assignment operator\n");
+    if (this != &other) {
+      // current object may have some memory allocated, free them first
+      delete[] m_Data; // IMPORTANT!!!
+  
+      m_Size = other.m_Size;
+      m_Data = other.m_Data;
+  
+      // Empty the original String
+      other.m_Size = 0;
+      other.m_Data = nullptr;
+    }
+    return *this;
+  }
+
+  ~String() {
+    printf("Destroyed\n");
+    delete m_Data;
+  }
+
+  void Print() {
+    for (uint32_t i = 0; i < m_Size; ++i) 
+      printf("%c", m_Data[i]);
+    printf("\n");
+  }
+
+private:
+  char* m_Data;
+  uint32_t m_Size;  
+};
+
+int main() {
+  String apple = "Apple";
+  String banana = "Banana";
+  String dest = std::move(banana); // call move constructor
+  dest = std::move(apple); // call move assignment operator
+
+  std::cout << "dest: ";
+  dest.Print(); // Apple
+  std::cout << "apple: ";
+  apple.Print(); // [nothing], because dest stole everything from apple
+}
+```
+
+Takeaway: we need to do 2 things in a move assignment operator
+
+- move only when `this != other`
+- free the heap allocated memory of current object
+
+Other things are the same as move constructor.
 
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

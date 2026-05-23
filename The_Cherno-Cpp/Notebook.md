@@ -3825,5 +3825,948 @@ int main() {
 }
 ```
 
+## How to Deal with OPTIONAL Data in C++
+
+`std::optional` is a feature introduced from C++ 17 to deal with data may or may not be there.
+
+### Without std::optional
+
+```c++
+#include <fstream>
+
+std::string ReadFileAsString(const std::string& filepath) {
+  std::ifstream stream(filepath); // ifstream: input file stream
+  if (stream) {
+    std::string result;
+    // read file contents into result
+    stream.close();
+    return result;
+  }
+
+  return std::string();
+}
+
+int main() {
+  std::string data = ReadFileAsString("data.txt");
+  if (data != "") {
+    std::cout << "File 'data.txt' could not be opened!" << std::endl;
+  }
+
+  // following code
+}
+```
+
+This is not good, because if file `"data.txt"` exists and could be opened, but it's empty, we handle it in file-could-not-be-opened way.
+
+We can fix this by adding another parameter `bool success`. But it still not very elegant. `std::optional` can handle this problem nicely.
+
+### With std::optional
+
+```c++
+#include<optional>
+#include <fstream>
+
+std::optional<std::string> ReadFileAsString(const std::string& filepath) {
+  std::ifstream stream(filepath); // ifstream: input file stream
+  if (stream) {
+    std::string result;
+    // read file contents into result
+    stream.close();
+    return result; // not changed
+  }
+
+  return {}; // empty option
+}
+
+int main() {
+  auto data = ReadFileAsString("data.txt");
+  if (!data) { // or if (!data.has_value)
+    std::cout << "File 'data.txt' could not be opened!" << std::endl;
+  }
+
+  // following code
+}
+```
+
+We can set default value for std::optional with `value_or(default)`.
+
+```c++
+auto data = ReadFileAsString("data.txt"); // data is std::optional<std::string>
+std::string value = data.value_or("Not present");
+```
+
+If data has value, `value = data.value()`; else `value = "Not present"`.
+
+## Multiple TYPES of Data in a SINGLE VARIABLE in C++?
+
+`std::variant`, it's helpful if you don't want to handle with some data now. And that data may be different types, it could be `int` or `float` or a struct. You can declare it to be `std::variant`, and handle it later.
+
+```c++
+#include <variant>
+
+int main() {
+  std::variant<std::string, int> data; // it could be string or int
+
+  data = "Cherno";
+  std::cout << std::get<std::string>(data) << std::endl; // treat it as string
+
+  data = 2;
+  std::cout << std::get<int>(data) << std::endl; // treat it as int
+
+  // If we choose the wrong type:
+  std::get<std::string>(data);
+  // Exception: bad_variant_access
+}
+```
+
+We can handle the wrong type assignment by `try-catch` syntax. Apart form that, we can handle it with the following ways.
+
+- index()
+
+```c++
+std::variant<std::string, int> data;
+// assign value to data
+data.index(); // return 0 if data is std::string, return 1 if data is int
+```
+
+- get_if()
+
+```c++
+std::variant<std::string, int> data;
+// assign value to data
+if (auto value = std::get_if<std::string>(&data)) {
+  std::string& v = *value;
+}
+```
+
+If `data` is `std::string`, `std::get_if` will return a pointer to the string; if not, it will return nullptr.
+
+### Variant and union
+
+Some people say that `std::variant` is a type-safe `union`. But there are some differences.
+
+Size of a union is its largest member. However, variant all types consecutively.
+
+```c++
+int main() {
+  std::variant<std::string, int, double> data;
+
+  std::cout << sizeof(std::string) << std::endl; // 28
+  std::cout << sizeof(int) << std::endl; // 4
+  std::cout << sizeof(double) << std::endl; // 8
+  std::cout << sizeof(data) << std::endl; // 40 (= 28 + 4 + 8)
+}
+```
+
+So, `union`s are more efficient, but `variant`s are safer. So, you should **use variants** unless you are doing low-level optimization.
+
+With variant, we can not only know if the function mentioned in last section opened the file successfully, but also know what happened when it failed.
+
+```c++
+enum class ErrorCode {
+  None = 0, NotFound = 1, NoAccess = 2
+};
+
+std::variant<std::string, ErrorCode> ReadFileAsString() {
+  // If none
+  return 0;
+
+  // If not found
+  return 1;
+
+  // If cannot access
+  return 2;
+
+  // if success
+  std::string result;
+  // read file into result
+  return result;
+}
+```
+
+## How to store ANY data in C++
+
+You can store anything with `std::any` (C++ 17 feature).
+
+```c++
+#include<any>
+
+int main() {
+  std::any data;
+  data = 2;
+  data = "Cherno";
+  
+  // cast
+  const char* str = std::any_cast<const char*>(data);
+
+  std::string str2 = std::any_cast<std::string>(data); // Invalid, because "Cherno" is const char* rather than std::string.
+}
+```
+
+It's like `std::variant`. But `std::any` is worse. For example, this won't work:
+
+```c++
+std::any data; 
+data = "Cherno";
+std::any_cast<std::string>(data);
+```
+
+Because "Cherno" is a `const char*`, rather than a `std::string`. But if data is a variant:
+
+```c++
+std::variant<int, std::string> data;
+data = "Cherno";
+std::string str = std::get<std::string>(data);
+```
+
+This will work properly, because "Cherno" is converted to `std::string` implicitly.
+
+### How does std::any work
+
+For small types (int, float, double), it's a union. For larg types (a large class, struct), it will create a void pointer and allocate memory dynamically (not good for performance). So, don't use `std::any` to store large types. In MSVC, types smaller than 32 bytes are classified as small types.
+
+Watch video [![any][yt]](https://youtu.be/7nPrUBNGRAk?t=594). If larger than 32 bytes, it will allocate for you.
+
+### Don't copy data
+
+So, don't write
+
+```c++
+std::any data; 
+data = std::string("Cherno");
+std::string str = std::any_cast<std::string>(data);
+```
+
+Write `std::string& str = std::any_cast<std::string&>(data);` (notice two `&`), instead.
+
+### When to use
+
+Actually, it is **useless**. `std::variant` is more useful than `std::any`. If you need to store any data, just use void pointer `void*`, it won't cause uncontrollable dynamic memory allocation.
+
+## How to make C++ run FASTER (with std::async)
+
+```c++
+#include <future>
+static std::mutex s_MeshesMutex;
+
+struct StructName {
+  // "Hazel" is a game engine written by Cherno
+  std::vector<Hazel::Ref<Hazel::Mesh>> m_Meshes;
+  std::vector<std::future<void>> m_Futures;
+};
+
+// We should pass meshes by address
+static void LoadMeshAsync(std::vector<Ref<Mesh>>* meshes, std::string filepath) {
+  // Load meshes parallel
+  auto mesh = Mesh::Load(filepath);
+
+  // vector meshes can only be accesses by at most one thread at any time
+  std::lock_guard<std::mutex> lock(s_MeshesMutex); // Get mutex lock
+  meshes->push_back(mesh);
+} // Automatically release lock when get out of the scope
+
+void LoadMeshes() {
+  // ifstream: input file stream
+  std::ifstream stream("src/Models.txt");
+  // Read the file and push_back each line to meshFilepaths
+  std::string line;
+  std::vector<std::string> meshFilepaths;
+  while (std::getline(stream, line))
+    meshFilepaths.push_back(line);
+
+#define ASYNC 1
+#if ASYNC
+  // Load meshes with multiple threads (asynchronous)
+  for (const auto& file : meshFilepaths) {
+    // std::async(async_method, function_name, arguments...)
+    m_Futures.push_back(std::async(std::launch::async, LoadMesh, &m_Meshes, file));
+  }
+#else
+  // Load meshes sequentially (synchronous)
+  for (const auto& file : meshFilepaths) {
+    m_Meshes.push_back(Mesh::Load(file));
+  }
+#endif
+}
+```
+
+\[Note\]
+
+1. In function `LoadMeshAsync`, we should pass `meshes` by address: [![pass by pointer][yt]](https://youtu.be/5HWCsmE9DrE?t=1065)
+2. Use `std::ref()` to pass by reference to threads.
+3. In VS, you can see parallel stacks by clicking "DEBUG - Windows - Parallel Stacks".
+
+Another example: see [./demo/Async/async.cc](./demo/Async/async.cc). Remember to disable compiler optimization with flag `-O0`: `g++ -O0 -g async.cc -o output/async && cd ./output && ./async`.
+
+### Why use "std::ref()", rather than "&"
+
+@w.mcnamara's comment:
+
+*std::thread requiring you to use std::ref instead of & is a deliberate design decision from the C++ committee to prevent you from shooting yourself in the foot when creating a thread.*
+
+*If you (for example) pass a local variable to a thread by reference, the variable may go out of scope before the thread uses it (because the thread executes in parallel), and then when that memory is accessed by reference in the newly created thread, it will result in undefined behavior.*
+
+*Requiring people to use std::ref forces them to think about why they're passing by reference, (and if they're making an error, possibly realize it) and displays deliberate intent within the code.*
+
+## How to make your STRINGS FASTER in C++
+
+`std::string` love to allocate memory, that will slow down our program, so, try your best to avoid it.
+
+Watch the video. [![how to make your strings faster][yt]](https://youtu.be/ZO68JEgoPeg)
+
+```c++
+static uint32_t s_AllocCount = 0;
+
+void* operator new(size_t size) {
+  s_AllocCount++;
+  std::cout << "Allocating " << size << " bytes\n";
+  return malloc(size);
+}
+
+void PrintName(const std::string& name) {
+  std::cout << name << std::endl;
+}
+
+int main() {
+  std::string name = "Yan Chernikov"; // 1st allocation
+  std::string firstName = name.substr(0, 3); // 2nd allocation
+  std::string lastName = name.substr(4, 9); // 3rd allocation
+
+  PrintName(firstName);
+  PrintName(lastName);
+
+  std::cout << s_AllocCount << std::endl;
+}
+```
+
+### String View
+
+String view is a pointer to an existing memory of a string plus a size.
+
+```c++
+// 1 allocation
+void PrintName(const std::string& name) {
+  std::cout << name << std::endl;
+}
+
+int main() {
+  std::string name = "Yan Chernikov"; // 1st allocation
+  std::string_view firstName(name.c_str(), 3);
+  std::string_view lastName(name.c_str() + 4, 9);
+  // call PrintName
+}
+```
+
+```c++
+// 0 allocation!!!!
+void PrintName(const std::string_view name) { // change to string_view
+  std::cout << name << std::endl;
+}
+
+int main() {
+  const char* name = "Yan Chernikov"; // no allocation!
+  std::string_view firstName(name, 3);
+  std::string_view lastName(name + 4, 9);
+  // call PrintName
+}
+```
+
+### New feature of string from C++17
+
+From @abhikjain's comment
+
+*When using clang with C++17,  the string was stored on stack, not heap. When the size of string exceeded beyond 32 bytes that it was stored on the heap. So those of you getting 0 allocations,  just increase the size of your string.*
+
+```c++
+// try this
+std::string name = "abcdefghijklmnopqrstuvwxyz 0123456789";
+std::string firstName = name.substr(0, 26);
+std::string lastName = name.substr(17, 20);
+```
+
+## VISUAL BENCHMARKING in C++ (how to measure performance visually)
+
+With chrome tracing, you can visualize your programs' performance. Generate a ".json" file (function `WriteProfile` in `Instrumentor.h` will do it for us) and type "chrome://tracing/" in your Chrome to visualize it.
+
+`Instrumentor.h`: Written by Cherno [on Github](https://gist.github.com/TheCherno/31f135eea6ee729ab5f26a6908eb3a5e). Definitely check it out!
+
+Watch the video [![profiling][yt]](https://youtu.be/xlAH4dbMVnU).  Or Missing Semester [Debugging and Profiling](https://missing.csail.mit.edu/2026/debugging-profiling/).
+
+### Notes about Instrumentor
+
+*Very nice video but there is one thing you forgot in your implementation of the Instrumentor. The WriteProfile function isn't threadsafe because it allows different threads to write to the json file at the same time which formats the file incorrectly. To fix it, just add a mutex and lock it at the start of the WriteProfile function. Keep up the good work.*
+
+## SINGLETONS in C++
+
+A singleton is basically a class with only one instance. Single is very useful when we only want to instantiate once but want to repeatedly use it.
+
+For example, a random generator. We only want to instantiate it once (to give seed to it), but we want to use it many times. Another example is renderer.
+
+Singletons behave **like namespaces**. In C++ using singleton is a way **to organize a bunch of global variables and static functions** (static here means exist only in this translation unit).
+
+```c++
+class Random {
+public:
+  // Random instance = Random::Get()
+  // should be prohibited -> delete copy constructor
+  Random(const Random&) = delete;
+  // You can use Random& instance = Random::Get()
+
+  // To get access this class
+  static Random& Get() {
+    return s_Instance;
+  }
+  
+  float Float () {
+    return m_RandomGenerator;
+    // Let's **pretend** that m_RandomGenerator is a generated float
+  }
+
+  // Or, we can move Float() in private and create a static version
+  static float SFloat() { return Get().IFloat(); }
+
+private:
+  Random() {}
+
+  float m_RandomGenerator = 0.5f;
+
+  // we have to declare it elsewhere
+  static Random s_Instance;
+
+  float IFloat () { // internal Float()
+    return m_RandomGenerator;
+  }
+};
+
+// declaration of s_Instance
+Random Random::s_Instance;
+
+int main() {
+  // :: is used to call static methods
+  auto& random = Random::Get();
+  float number = random.Float();
+
+  // Or
+  float number2 = Random::SFloat();
+}
+```
+
+**We don't want constructors** (by marking them as `private`), because constructor allows people to instantiate them.
+
+We can also prevent creating `s_Instance`, create the instance in `Get()` function. Because `Get()` is a static function, `instance` will continue existing until the program ends.
+
+```c++
+class Random {
+public:
+  Random(const Random&) = delete;
+
+  static Random& Get() {
+    // Create instance
+    static Random instance;
+    return instance;
+  }
+
+  static float SFloat() { return Get().IFloat(); }
+
+private:
+  Random() {}
+  float m_RandomGenerator = 0.5f;
+  float IFloat () {
+    return m_RandomGenerator;
+  }
+};
+
+int main() {
+  float number = Random::SFloat();
+}
+```
+
+### Singleton has same effect as namespace
+
+If we want to write the code above in a `namespace` way.
+
+```c++
+namespace RandomClass {
+  static float s_RandomGenerator = 0.5f;
+  static float Float () { return s_RandomGenerator;}
+};
+
+int main() {
+  float number = RandomClass::Float();
+}
+```
+
+## Small String Optimization in C++
+
+Strings are infamous for its slow speed (because it tent to allocate memory). Small stings can be optimized by C++ standard library (it may be introduced from C++17). It's called Small String Optimization (SSO).
+
+**Allocating memory must happen on heap.**
+
+If you have a small string (for 2020's MSVC, it's no greater than 15 characters), string will be on stack.
+
+[![small string optimization][yt]](https://youtu.be/S7oVXMzTo4w)
+
+## Track MEMORY ALLOCATIONS the Easy Way in C++
+
+We can track if memory is allocated and how many bytes are allocated by overriding `new` keyword.
+
+```c++
+struct AllocationMetrics {
+  uint32_t TotalAllocated = 0;
+  uint32_t TotalFreed = 0;
+
+  uint32_t CurrentUsage() { return TotalAllocated - TotalFreed; }
+};
+
+static AllocationMetrics s_AllocationMetrics;
+
+void* operator new(size_t size) {
+  std::cout << "Allocating " << size << " bytes." << std::endl;
+  s_AllocationMetrics.TotalAllocated += size;
+  return malloc(size);
+}
+
+void operator delete(void* memory) {
+  std::cout << "Freeing " << memory << std::endl;
+  free(memory);
+}
+
+void operator delete(void* memory, size_t size) {
+  std::cout << "Freeing " << size << " bytes from " << memory << std::endl;
+  s_AllocationMetrics.TotalFreed += size;
+  free(memory);
+}
+
+class Object {
+  int x, y, z;
+};
+
+int main() {
+  {
+    std::unique_ptr<Object> obj = std::make_unique<Object>(); // Allocating 12 bytes.
+  } // Freeing 12 bytes from 0x...
+
+  std::string str = "Cherno"; // won't allocate
+  std::string str2 = "Cherno large string"; // Allocating 20 bytes.
+
+  std::cout << s_AllocationMetrics.CurrentUsage() << std::endl; // 20
+} // Freeing 20 bytes from 0x...
+```
+
+Moreover, we can add breakpoint in `new` function, and see which line allocates memory.
+
+You can also find profiling tools to achieve this.
+
+## lvalues and rvalues in C++
+
+**Takeaway:**
+
+1. **rvalues are temporary, while lvalues can be stored in memory.**
+2. **`&` accepts lvalues, `&&` accepts rvalues, `const &` accepts both.**
+
+For `int i = 10;`, `i` is lvalue while `10` is rvalue. A rvalue is temporary, it can exist in registers but cannot be store in memory. While a lvalue can be stored in memory. So, you can get the address of a lvalue, but you cannot get the address of a rvalue.
+
+You cannot assign something to a rvalue, like `10 = i;` is illegal. But you can assign lvalue or rvalue to lvalue `int a = i;` is legal.
+
+The returning value (by copy) of a function is also rvalue. You can `int i = GetValue();` but you cannot `GetValue() = i;`.
+
+However, if a function returns a reference to a lvalue, it is a lvalue.
+
+```c++
+int& GetValue() { // return by reference
+  static int value = 10;
+  return value; // value is a rvalue
+}
+
+int main() {
+  int i = GetValue(); // Normal usage, legal
+  GetValue() = 5; // Also legal!
+
+  int k = GetValue();
+  std::cout << k << std::endl; // 5
+}
+```
+
+Since rvalues have no addresses, you cannot pass it by reference.
+
+```c++
+void SetValue(int value) {}
+void SetValue2(int& value) {}
+
+int main() {
+  int i = 5;
+  SetValue(i); // Legal
+  SetValue(10); // Legal
+  SetValue2(i); // Legal
+  SetValue2(10); // Illegal!!!
+}
+```
+
+### Const + rvalue
+
+Although in normal case, you cannot reference a rvalue. But if you assign it to a `const`, it is legal.
+
+```c++
+int& a = 10; // Illegal
+const int& a = 10; // Legal
+```
+
+So, if you want your `SetValue(int& value)` function has the ability to accept both rvalue and lvalue, make it const:
+
+```c++
+void SetValue(const int& value) {}
+
+int main() {
+  int i = 5;
+  SetValue(i); // Legal
+  SetValue(10); // Illegal!!!
+}
+```
+
+Another example:
+
+```c++
+std::string firstName = "Yan";
+std::string lastName = "Chernikov";
+std::string fullName = firstName + lastName;
+```
+
+In this example, lvalues are `firstName`, `lastName`, and `fullName`. And rvalues are `"Yan"`, `"Chernikov"`, and `firstName + lastName` (which is `YanChernikov`).
+
+So, you you create a function:
+
+```c++
+void PrintName(std::string& name) {
+  std::cout << name << std::endl;
+}
+```
+
+You cannot pass rvalues to it. So, `PrintName(firstName + lastName)` is illegal. To make your function supports rvalues, add `const`: `void PrintName(const std::string& name)`.
+
+So, a lot of functions in C++ accept **const reference** arguments.
+
+### rvalue reference
+
+If we want to create a function that ONLY accepts rvalues, use `&&`:
+
+```c++
+void PrintName(std::string&& name) {
+  std::cout << name << std::endl;
+}
+```
+
+Now, `PrintName()` can only accept rvalues. `PrintName(fullName);` is illegal, while `PrintName(firstName + lastName);` is legal.
+
+If both overloads exist, rvalues will prefer rvalue reference one.
+
+```c++
+void PrintName(const std::string& name) {
+  std::cout << "Both are acceptable" << std::endl;
+  std::cout << name << std::endl;
+}
+
+void PrintName(std::string&& name) {
+  std::cout << "rvalue" << std::endl;
+  std::cout << name << std::endl;
+}
+
+int main() {
+  std::string str = "Cherno";
+  PrintName(str); // Both are acceptable\nCherno
+  PrintName("" + str); // rvalue\nCherno
+}
+```
+
+## Continuous Integration in C++
+
+Continuous Integration (CI) means contiguously integrate your code during development.
+
+This section is talking about how to set up a C++ project so it can be automatically build and tested every time it's pushed to GitHub.
+
+We can achieve this by using Jenkins. Watch the video [![Jenkins][yt]](https://youtu.be/FHPtchw-eHA?t=258).
+
+## Static Analysis in C++
+
+[![static analysis][yt]](https://youtu.be/vYW6TOwFK2M)
+
+You can use static analyzers (for example, PVS-Studio, this video's sponsor). But in 2026, LLMs can help you with that.
+
+## Argument Evaluation Order in C++
+
+```c++
+void PrintSum(int a, int b) {
+  std::cout << a << " + " << b << " = " << (a + b) << std::endl;
+}
+
+int main() {
+  int value = 0;
+  PrintSum(value++, value++); // Undefined behavior!!!
+}
+```
+
+It's ***undefined behavior***, so the result depends on compiler. **NEVER WRITE CODE LIKE THIS!!!!!!!!**
+
+- MSVC C++14 (release mode): 1 + 0 = 1; -> 2nd argument is parsed first
+- MSVC C++14 (debug mode): 0 + 0 = 0; -> both are parsed parallel
+- MSVC C++17 (release mode): 1 + 0 = 1; -> same as C++14
+- gcc 9.3.0 C++2a(C+=20): 1 + 0 = 1;
+- gcc 9.3.0 C++14: 1 + 0 = 1;
+- clang C++2a(C++20): 0 + 1 = 1;
+- clang C++14: 0 + 1 = 1;
+
+Both gcc and clang give warning, while MSVC won't warn you.
+
+Tip: C++17 standard says that postfix-expressions has to be parsed before each expression. Meaning that if `PrintSum(value++, a + b);`, `value++` is parsed before `a + b`. However, for `PrintSum(value++, value++);` the order is undefined.
+
+## Move Semantics in C++
+
+Move semantics allow us to move objects around. In cases that we don't want to copy an object, but just want to change its ownership, we can use move semantics.
+
+```c++
+class String {
+public:
+  String() = default;
+  String(const char* string) {
+    printf("Created\n");
+    m_Size = strlen(string);
+    m_Data = new char[m_Size];
+    memcpy(m_Data, string, m_Size);
+  }
+  String(const String& other) {
+    printf("Copied\n");
+    m_Size = other.m_Size;
+    m_Data = new char[m_Size];
+    memcpy(m_Data, other.m_Data, m_Size);
+  }
+  ~String() {
+    delete m_Data;
+  }
+
+  void Print() {
+    for (uint32_t i = 0; i < m_Size; ++i) 
+      printf("%c", m_Data[i]);
+    printf("\n");
+  }
+
+private:
+  char* m_Data;
+  uint32_t m_Size;  
+};
+
+class Entity {
+public:
+  Entity(const String& name)
+    : m_Name(name) {
+  }
+
+  void PrintName() {
+    m_Name.Print();
+  }
+
+private:
+  String m_Name;
+};
+
+int main() {
+  Entity entity(String("Cherno")); // Created\nCopied\n
+  entity.PrintName(); // Cherno
+}
+```
+
+First, it convert "Cherno" from `const char*` to `String` (constructor called). Then, it is copied (copy constructor called) and passed to entity's constructor.
+
+Copy constructor is called and it allocates memory, which is not we want. To prevent copying, we can use move semantics. -> Write a move constructor.
+
+This section won't cover `std::move`. It will be the topic of [next section](#stdmove-and-the-move-assignment-operator-in-c). But just remember that `std::move` is a better way.
+
+```c++
+class String {
+public:
+  String() = default;
+  String(const char* string) {
+    printf("Created\n");
+    m_Size = strlen(string);
+    m_Data = new char[m_Size];
+    memcpy(m_Data, string, m_Size);
+  }
+  String(const String& other) {
+    printf("Copied\n");
+    m_Size = other.m_Size;
+    m_Data = new char[m_Size];
+    memcpy(m_Data, other.m_Data, m_Size);
+  }
+  // A move constructor, it accepts rvalues
+  String(String&& other) noexcept {
+    printf("Moved\n");
+    m_Size = other.m_Size;
+    m_Data = other.m_Data;
+
+    // Empty the original String
+    other.m_Size = 0;
+    other.m_Data = nullptr;
+  }
+  ~String() {
+    printf("Destroyed\n");
+    delete m_Data;
+  }
+
+  void Print() {
+    for (uint32_t i = 0; i < m_Size; ++i) 
+      printf("%c", m_Data[i]);
+    printf("\n");
+  }
+
+private:
+  char* m_Data;
+  uint32_t m_Size;  
+};
+
+class Entity {
+public:
+  Entity(const String& name)
+    : m_Name(name) {}
+  // A move constructor
+  Entity(String&& name)
+    : m_Name((String&&)name) {}
+
+  void PrintName() {
+    m_Name.Print();
+  }
+
+private:
+  String m_Name;
+};
+
+int main() {
+  Entity entity(String("Cherno"));
+  entity.PrintName();
+}
+```
+
+In `Entity(String&& name) : m_Name((String&&)name) {}`, you have to explicitly cast name to rvalue (String&&), otherwise, it will still be copied! You can also write `Entity(String&& name) : m_Name(std::move(name)) {}`. [`std::move`](#stdmove-and-the-move-assignment-operator-in-c) will be covered soon.
+
+## std::move and the Move Assignment Operator in C++
+
+Move constructor is covered in last section. This section will cover how to move a object into a existing object.
+
+```c++
+// Define String class (same as last section)
+
+int main() {
+  String string = "Hello";
+  String dest = string; // Copy String
+  String dest2((String&&)string); // Move String (is equivalent to String dest2 = (String&&)string;)
+}
+```
+
+Although we can use `String dest2((String&&)string);` to move objects, this is not the best way. `std::move` is a more clever and elegant way.
+
+### std::move
+
+**`std::move` convert a existing variable into a temporary value (rvalue).**
+
+```c++
+int main() {
+  String string = "Hello";
+  String dest = std::move(string);
+}
+```
+
+Or `String dest(std::move(string));`. Please remember that `Object instance(other);` is equivalent to `Object instance = other;`, where `other` is another instance of `Object`.
+
+### Move assignment operator
+
+But you cannot do this:
+
+```c++
+int main() {
+  String string = "Hello";
+  String dest = std::move(string);
+  dest = std::move(string); // Illegal
+}
+```
+
+Because `dest = std::move(string);` will call assignment operator (=), rather than **move assignment operator**. We have to define a move assignment operator.
+
+```c++
+class String {
+public:
+  String() = default;
+  String(const char* string) {
+    printf("Created\n");
+    m_Size = strlen(string);
+    m_Data = new char[m_Size];
+    memcpy(m_Data, string, m_Size);
+  }
+  String(const String& other) {
+    printf("Copied\n");
+    m_Size = other.m_Size;
+    m_Data = new char[m_Size];
+    memcpy(m_Data, other.m_Data, m_Size);
+  }
+  // A move constructor
+  String(String&& other) noexcept {
+    printf("Move constructor\n");
+    m_Size = other.m_Size;
+    m_Data = other.m_Data;
+
+    // Empty the original String
+    other.m_Size = 0;
+    other.m_Data = nullptr;
+  }
+
+  // A move assignment operator
+  String& operator=(String&& other) noexcept {
+    printf("Move assignment operator\n");
+    if (this != &other) {
+      // current object may have some memory allocated, free them first
+      delete[] m_Data; // IMPORTANT!!!
+  
+      m_Size = other.m_Size;
+      m_Data = other.m_Data;
+  
+      // Empty the original String
+      other.m_Size = 0;
+      other.m_Data = nullptr;
+    }
+    return *this;
+  }
+
+  ~String() {
+    printf("Destroyed\n");
+    delete m_Data;
+  }
+
+  void Print() {
+    for (uint32_t i = 0; i < m_Size; ++i) 
+      printf("%c", m_Data[i]);
+    printf("\n");
+  }
+
+private:
+  char* m_Data;
+  uint32_t m_Size;  
+};
+
+int main() {
+  String apple = "Apple";
+  String banana = "Banana";
+  String dest = std::move(banana); // call move constructor
+  dest = std::move(apple); // call move assignment operator
+
+  std::cout << "dest: ";
+  dest.Print(); // Apple
+  std::cout << "apple: ";
+  apple.Print(); // [nothing], because dest stole everything from apple
+}
+```
+
+Takeaway: we need to do 2 things in a move assignment operator
+
+- move only when `this != other`
+- free the heap allocated memory of current object
+
+Other things are the same as move constructor.
+
 <!----------- References ----------->
 [yt]: https://img.shields.io/badge/YouTube-%23FF0000.svg?style=flat-square&logo=YouTube&logoColor=white

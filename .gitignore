@@ -1,5 +1,8 @@
 CSCS-Advanced_Cpp
 
+# Automatically generated folders
+output
+
 # CMake
 build
 .cache
